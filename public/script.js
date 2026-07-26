@@ -2,7 +2,9 @@
 // IKUTHA EVENT HUB - SCRIPT.JS
 // ==========================================
 
-const API_URL = "http://localhost:5000";
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : 'https://ikutha-event-hub.onrender.com';
 
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let allItems = [];
