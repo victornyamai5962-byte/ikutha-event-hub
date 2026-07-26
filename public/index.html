@@ -42,6 +42,16 @@
 <main>
 
     <!-- ===================================
+         ITEMS CONTAINER (REQUIRED FOR SCRIPT.JS)
+    =================================== -->
+    <section class="items-section">
+        <h2 id="category-name"></h2>
+        <div id="items-container" class="items-grid">
+            <!-- Dynamic items or search results appear here -->
+        </div>
+    </section>
+
+    <!-- ===================================
          CATEGORIES
     =================================== -->
     <section class="categories-section">
@@ -113,6 +123,13 @@
                 required
             >
 
+            <input
+                type="text"
+                id="event-location"
+                placeholder="Event Location"
+                required
+            >
+
             <h3>Selected Items</h3>
 
             <div id="cart-items">
@@ -125,7 +142,7 @@
                 </strong>
             </div>
 
-            <button type="submit" class="submit-booking-btn">
+            <button type="submit" id="submit-booking-btn" class="submit-booking-btn">
                 Submit Booking
             </button>
         </form>
@@ -202,7 +219,7 @@
 </footer>
 
 <!-- ===================================
-     JAVASCRIPT
+     JAVASCRIPT LINK
 =================================== -->
 <script src="script.js"></script>
 

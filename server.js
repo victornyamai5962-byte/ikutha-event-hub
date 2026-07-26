@@ -32,7 +32,6 @@ const storage = multer.diskStorage({
         cb(null, "images/"); // Saves files directly to your 'images' folder
     },
     filename: (req, file, cb) => {
-        // Generates a unique filename using timestamp + original extension
         cb(null, Date.now() + path.extname(file.originalname));
     }
 });
@@ -176,6 +175,7 @@ app.delete("/categories/:id", (req, res) => {
 // ITEMS
 // ======================
 
+// Public items route - hides items marked as 'Vendor Item' so public customers don't see them
 app.get("/items", (req, res) => {
     const sql = `
         SELECT
@@ -188,9 +188,13 @@ app.get("/items", (req, res) => {
             items.status,
             items.image_path,
             items.quantity,
+            items.is_deleted,
+            items.owner_name,
+            items.owner_phone,
             categories.category_name
         FROM items
         LEFT JOIN categories ON items.category_id = categories.id
+        WHERE items.is_deleted = 0 AND items.status != 'Vendor Item'
         ORDER BY items.id DESC
     `;
     db.query(sql, (err, results) => {
@@ -202,14 +206,44 @@ app.get("/items", (req, res) => {
     });
 });
 
-// SEARCH ITEMS ROUTE
+// Admin items route - allows the admin dashboard to see ALL items including vendor items & owner info
+app.get("/admin/items", (req, res) => {
+    const sql = `
+        SELECT
+            items.id,
+            items.category_id,
+            items.item_name,
+            items.description,
+            items.price,
+            items.location,
+            items.status,
+            items.image_path,
+            items.quantity,
+            items.is_deleted,
+            items.owner_name,
+            items.owner_phone,
+            categories.category_name
+        FROM items
+        LEFT JOIN categories ON items.category_id = categories.id
+        WHERE items.is_deleted = 0
+        ORDER BY items.id DESC
+    `;
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: "Database error" });
+        }
+        res.json(results);
+    });
+});
+
 app.get("/items/search", (req, res) => {
     const searchQuery = req.query.q || "";
     const sql = `
         SELECT items.*, categories.category_name 
         FROM items 
         LEFT JOIN categories ON items.category_id = categories.id 
-        WHERE items.item_name LIKE ? OR items.description LIKE ? OR items.location LIKE ?
+        WHERE items.is_deleted = 0 AND items.status != 'Vendor Item' AND (items.item_name LIKE ? OR items.description LIKE ? OR items.location LIKE ?)
         ORDER BY items.id DESC
     `;
     const wildcard = `%${searchQuery}%`;
@@ -222,14 +256,13 @@ app.get("/items/search", (req, res) => {
     });
 });
 
-// ITEMS BY CATEGORY ROUTE
 app.get("/items/category/:categoryId", (req, res) => {
     const categoryId = req.params.categoryId;
     const sql = `
         SELECT items.*, categories.category_name 
         FROM items 
         LEFT JOIN categories ON items.category_id = categories.id 
-        WHERE items.category_id = ?
+        WHERE items.is_deleted = 0 AND items.status != 'Vendor Item' AND items.category_id = ?
         ORDER BY items.id DESC
     `;
     db.query(sql, [categoryId], (err, results) => {
@@ -241,11 +274,8 @@ app.get("/items/category/:categoryId", (req, res) => {
     });
 });
 
-// Updated with upload.single('image') to handle file uploads automatically
 app.post("/items", upload.single("image"), (req, res) => {
-    const { category_id, item_name, description, price, location, status, quantity } = req.body;
-    
-    // Automatically creates path string (e.g., "images/1689234823.jpg") if a file was uploaded
+    const { category_id, item_name, description, price, location, status, quantity, owner_name, owner_phone } = req.body;
     const image_path = req.file ? `images/${req.file.filename}` : (req.body.image_path || null);
 
     if (!category_id || !item_name || !price) {
@@ -253,10 +283,10 @@ app.post("/items", upload.single("image"), (req, res) => {
     }
 
     const sql = `
-        INSERT INTO items (category_id, item_name, description, price, location, status, image_path, quantity)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO items (category_id, item_name, description, price, location, status, image_path, quantity, owner_name, owner_phone, is_deleted)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
     `;
-    const values = [category_id, item_name, description, price, location, status || "Available", image_path, quantity || 1];
+    const values = [category_id, item_name, description, price, location, status || "Available", image_path, quantity || 1, owner_name || null, owner_phone || null];
     
     db.query(sql, values, (err, result) => {
         if (err) {
@@ -282,7 +312,8 @@ app.put("/items/:id", (req, res) => {
 
 app.delete("/items/:id", (req, res) => {
     const itemId = req.params.id;
-    const sql = "DELETE FROM items WHERE id = ?";
+    const sql = "UPDATE items SET is_deleted = 1, status = 'Unavailable' WHERE id = ?";
+    
     db.query(sql, [itemId], (err, result) => {
         if (err) {
             console.error(err);
@@ -291,28 +322,91 @@ app.delete("/items/:id", (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Item not found" });
         }
-        res.json({ message: "Item deleted successfully" });
+        res.json({ message: "Item archived successfully and historical records preserved." });
     });
 });
 
 // ======================
-// BOOKINGS
+// BOOKINGS & AVAILABILITY CHECK
 // ======================
 
-app.post("/bookings", (req, res) => {
-    const { customer_id, total_amount, event_date } = req.body;
-    if (!customer_id || !event_date) {
-        return res.status(400).json({ message: "Customer and event date are required." });
-    }
+app.post("/bookings", async (req, res) => {
+    try {
+        const customer_id = req.body.customer_id || req.body.customerId;
+        const event_date = req.body.event_date || req.body.eventDate || req.body.date;
+        const location = req.body.location || req.body.event_location || req.body.eventLocation || "";
+        const items = req.body.items || req.body.cart;
 
-    const sql = "INSERT INTO booking_requests (customer_id, total_amount, event_date, status) VALUES (?, ?, ?, ?)";
-    db.query(sql, [customer_id, total_amount || 0, event_date, "Pending"], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ message: "Database error" });
+        if (!items || !Array.isArray(items) || items.length === 0 || !event_date || !customer_id) {
+            return res.status(400).json({ message: "Missing booking details, customer, or event date." });
         }
-        res.status(201).json({ message: "Booking request created successfully", booking_request_id: result.insertId });
-    });
+
+        const promisePool = db.promise();
+
+        for (const cartItem of items) {
+            const itemId = cartItem.item_id || cartItem.id;
+            const requestedQty = Number(cartItem.quantity) || 1;
+
+            const [itemResult] = await promisePool.query(
+                "SELECT quantity, item_name FROM items WHERE id = ?", 
+                [itemId]
+            );
+
+            if (itemResult.length === 0) {
+                return res.status(404).json({ message: `Item with ID ${itemId} not found.` });
+            }
+
+            const totalStock = Number(itemResult[0].quantity);
+            const itemName = itemResult[0].item_name;
+
+            // Check Total Stock First
+            if (requestedQty > totalStock) {
+                return res.status(400).json({ 
+                    message: `The quantity you are trying to book for '${itemName}' is not in stock. We only have ${totalStock} available in store.` 
+                });
+            }
+
+            // Check Date Availability Second
+            const [sumResult] = await promisePool.query(`
+                SELECT SUM(bri.quantity) as booked_qty 
+                FROM booking_request_items bri
+                JOIN booking_requests br ON bri.booking_request_id = br.id
+                WHERE bri.item_id = ? 
+                  AND br.event_date = ? 
+                  AND br.status != 'Cancelled'
+            `, [itemId, event_date]);
+
+            const alreadyBooked = Number(sumResult[0].booked_qty) || 0;
+            const remainingStockForDate = totalStock - alreadyBooked;
+
+            if (requestedQty > remainingStockForDate) {
+                return res.status(400).json({ 
+                    message: `This item is not available for that date (${event_date}). Only ${remainingStockForDate} left for this date.` 
+                });
+            }
+        }
+
+        const totalAmount = items.reduce((sum, i) => sum + ((i.price || 0) * (Number(i.quantity) || 1)), 0);
+        
+        const [insertResult] = await promisePool.query(
+            "INSERT INTO booking_requests (customer_id, total_amount, event_date, location, status) VALUES (?, ?, ?, ?, 'Pending')",
+            [customer_id, totalAmount, event_date, location]
+        );
+
+        const bookingId = insertResult.insertId;
+        const bookingItemsValues = items.map(i => [bookingId, (i.item_id || i.id), (i.price || 0), (Number(i.quantity) || 1)]);
+        
+        await promisePool.query(
+            "INSERT INTO booking_request_items (booking_request_id, item_id, price, quantity) VALUES ?",
+            [bookingItemsValues]
+        );
+
+        res.status(201).json({ message: "Booking submitted successfully!", booking_request_id: bookingId });
+
+    } catch (error) {
+        console.error("Booking submission server error:", error);
+        res.status(500).json({ message: "Internal server error during booking submission." });
+    }
 });
 
 app.get("/bookings", (req, res) => {
@@ -327,27 +421,6 @@ app.get("/bookings", (req, res) => {
 });
 
 // ======================
-// BOOKING ITEMS
-// ======================
-
-app.post("/booking-items", (req, res) => {
-    const { booking_request_id, items } = req.body;
-    if (!booking_request_id || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ message: "Invalid request payload" });
-    }
-
-    const values = items.map(item => [booking_request_id, item.item_id, item.price || 0]);
-    const sql = "INSERT INTO booking_request_items (booking_request_id, item_id, price) VALUES ?";
-    db.query(sql, [values], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ message: "Database error" });
-        }
-        res.status(201).json({ message: "Booking items saved successfully", affectedRows: result.affectedRows });
-    });
-});
-
-// ======================
 // ADMIN ROUTES
 // ======================
 
@@ -358,8 +431,9 @@ app.get("/admin/bookings", (req, res) => {
             br.customer_id,
             c.full_name AS customer_name,
             c.phone_number AS phone,
+            br.location,
             GROUP_CONCAT(DISTINCT cat.category_name SEPARATOR ', ') AS categories,
-            GROUP_CONCAT(DISTINCT i.item_name SEPARATOR ', ') AS items_requested,
+            GROUP_CONCAT(DISTINCT CONCAT(i.item_name, ' (x', bri.quantity, ')') SEPARATOR ', ') AS items_requested,
             br.event_date,
             br.total_amount,
             br.status
@@ -381,7 +455,23 @@ app.get("/admin/bookings", (req, res) => {
 });
 
 app.get("/admin/customers", (req, res) => {
-    const sql = "SELECT id, full_name, phone_number, created_at FROM customers ORDER BY id DESC";
+    const sql = `
+        SELECT 
+            c.id, 
+            c.full_name, 
+            c.phone_number, 
+            c.created_at,
+            GROUP_CONCAT(DISTINCT CONCAT(i.item_name, ' (x', bri.quantity, ')') SEPARATOR ', ') AS items_ordered,
+            GROUP_CONCAT(DISTINCT br.location SEPARATOR ', ') AS event_locations,
+            GROUP_CONCAT(DISTINCT br.event_date SEPARATOR ', ') AS event_dates,
+            GROUP_CONCAT(DISTINCT br.status SEPARATOR ', ') AS booking_statuses
+        FROM customers c
+        LEFT JOIN booking_requests br ON c.id = br.customer_id
+        LEFT JOIN booking_request_items bri ON c.id = bri.booking_request_id -- adjusted join reference safety
+        LEFT JOIN items i ON bri.item_id = i.id
+        GROUP BY c.id
+        ORDER BY c.id DESC
+    `;
     db.query(sql, (err, results) => {
         if (err) {
             console.error(err);
@@ -392,41 +482,31 @@ app.get("/admin/customers", (req, res) => {
 });
 
 app.put("/admin/bookings/:id", (req, res) => {
-    const id = req.params.id;
+    const bookingId = req.params.id;
     const { status } = req.body;
     if (!status) return res.status(400).json({ message: "Status is required" });
 
     const updateBookingSql = "UPDATE booking_requests SET status = ? WHERE id = ?";
-    db.query(updateBookingSql, [status, id], (err, result) => {
-        if (err) return res.status(500).json({ message: "Database error", error: err.message });
-        if (result.affectedRows === 0) return res.status(404).json({ message: "Booking request not found" });
-
-        if (status === "Confirmed") {
-            const updateItemsSql = `UPDATE items SET status = 'Unavailable' WHERE id IN (SELECT item_id FROM booking_request_items WHERE booking_request_id = ?)`;
-            db.query(updateItemsSql, [id], () => {
-                res.json({ message: "Booking confirmed and items marked unavailable" });
-            });
-        } else if (status === "Cancelled" || status === "Rejected") {
-            const releaseItemsSql = `UPDATE items SET status = 'Available' WHERE id IN (SELECT item_id FROM booking_request_items WHERE booking_request_id = ?)`;
-            db.query(releaseItemsSql, [id], () => {
-                res.json({ message: `Booking updated to ${status} and items released` });
-            });
-        } else {
-            res.json({ message: `Booking status updated to ${status}` });
+    db.query(updateBookingSql, [status, bookingId], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: "Failed to update booking status" });
         }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+        res.json({ message: `Booking status updated to ${status} successfully!` });
     });
 });
 
 app.delete("/admin/bookings/:id", (req, res) => {
     const bookingId = req.params.id;
-
     const getBookingSql = "SELECT customer_id FROM booking_requests WHERE id = ?";
     db.query(getBookingSql, [bookingId], (err, results) => {
         if (err) return res.status(500).json({ message: "Database error" });
         if (results.length === 0) return res.status(404).json({ message: "Booking not found" });
 
         const customerId = results[0].customer_id;
-
         const deleteItemsSql = "DELETE FROM booking_request_items WHERE booking_request_id = ?";
         db.query(deleteItemsSql, [bookingId], (err) => {
             if (err) return res.status(500).json({ message: "Error deleting booking items" });

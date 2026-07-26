@@ -86,6 +86,7 @@ async function fetchBookings() {
                 <td>${b.phone || 'N/A'}</td>
                 <td>${b.categories || 'N/A'}</td>
                 <td>${b.items_requested || 'N/A'}</td>
+                <td>${b.location || 'N/A'}</td>
                 <td><span class="booking-date">${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'N/A'}</span></td>
                 <td><span class="badge badge-${statusLower}">${b.status || 'Pending'}</span></td>
                 <td>
@@ -132,10 +133,16 @@ async function updateBookingStatus(id, status) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status })
         });
-        if (!response.ok) throw new Error('Failed to update booking status');
+        
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to update booking status');
+        }
+        
         fetchBookings();
     } catch (err) {
         console.error('Failed to update booking status:', err);
+        alert('Error updating status: ' + err.message);
     }
 }
 
@@ -143,10 +150,12 @@ function showBookingDeleteConfirm(buttonElement, id) {
     const container = buttonElement.closest('div');
     if (!container) return;
 
+    const safeId = parseInt(id, 10);
+
     container.innerHTML = `
         <div style="display: flex; align-items: center; gap: 5px; background: #fff3cd; padding: 4px; border-radius: 4px; border: 1px solid #ffeeba;">
             <span style="font-size: 11px; color: #856404; font-weight: bold;">Sure?</span>
-            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #dc3545; color: white;" onclick="deleteBooking(${id})">Yes</button>
+            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #dc3545; color: white;" onclick="deleteBooking(${safeId})">Yes</button>
             <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #6c757d; color: white;" onclick="fetchBookings()">No</button>
         </div>
     `;
@@ -182,7 +191,7 @@ async function fetchCustomers() {
         tbody.innerHTML = '';
 
         if (!Array.isArray(customers) || customers.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">No customers found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No customers found.</td></tr>`;
             return;
         }
 
@@ -194,10 +203,15 @@ async function fetchCustomers() {
                 formattedDate = new Date(customer.created_at).toLocaleString();
             }
 
+            const statusLower = (customer.booking_statuses || '').toString().trim().toLowerCase();
+
             tr.innerHTML = `
                 <td>#${customer.id}</td>
                 <td>${customer.full_name || 'N/A'}</td>
                 <td>${customer.phone_number || 'N/A'}</td>
+                <td>${customer.items_ordered || 'No orders yet'}</td>
+                <td>${customer.event_locations || 'N/A'}</td>
+                <td><span class="badge badge-${statusLower}">${customer.booking_statuses || 'N/A'}</span></td>
                 <td>${formattedDate}</td>
             `;
             tbody.appendChild(tr);
@@ -212,7 +226,7 @@ async function fetchCustomers() {
 // ======================
 async function fetchItems() {
     try {
-        const response = await fetch(`${API_BASE_URL}/items`);
+        const response = await fetch(`${API_BASE_URL}/admin/items`);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
         const items = await response.json();
@@ -223,21 +237,23 @@ async function fetchItems() {
 
         items.forEach(item => {
             const tr = document.createElement('tr');
-            const statusClass = item.status === 'Available' ? 'badge-available' : 'badge-unavailable';
             const formattedPrice = item.price ? `KES ${item.price} / day` : 'N/A';
             const itemQty = item.quantity || 1;
+            
+            const ownerName = item.owner_name ? item.owner_name : 'In-House';
+            const ownerPhone = item.owner_phone ? item.owner_phone : 'N/A';
 
             tr.innerHTML = `
                 <td>${item.id}</td>
-                <td>${item.image_path ? `<img src="${item.image_path}" width="40" height="40" style="object-fit:cover; border-radius:4px;">` : 'No image'}</td>
+                <td>${item.image_path ? `<img src="${API_BASE_URL}/${item.image_path}" width="40" height="40" style="object-fit:cover; border-radius:4px;">` : 'No image'}</td>
                 <td>${item.item_name}</td>
                 <td>${item.category_name || item.category_id}</td>
                 <td>${formattedPrice}</td>
                 <td><strong>${itemQty}</strong></td>
-                <td><span class="badge ${statusClass}">${item.status || 'Available'}</span></td>
+                <td>${ownerName}</td>
+                <td>${ownerPhone}</td>
                 <td>
                     <div style="display: flex; gap: 5px;">
-                        <button class="btn-toggle-status" onclick="toggleItemAvailability(${item.id}, '${item.status}')">Toggle</button>
                         <button class="btn-delete" style="background-color: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onclick="showItemDeleteConfirm(this, ${item.id})">Delete</button>
                     </div>
                 </td>
@@ -249,29 +265,16 @@ async function fetchItems() {
     }
 }
 
-async function toggleItemAvailability(id, currentStatus) {
-    const newStatus = currentStatus === 'Available' ? 'Unavailable' : 'Available';
-    try {
-        const response = await fetch(`${API_BASE_URL}/items/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-        });
-        if (!response.ok) throw new Error(`Server returned status ${response.status}`);
-        fetchItems();
-    } catch (err) {
-        console.error('Failed to toggle item state:', err);
-    }
-}
-
 function showItemDeleteConfirm(buttonElement, id) {
     const container = buttonElement.closest('div');
     if (!container) return;
 
+    const safeId = parseInt(id, 10);
+
     container.innerHTML = `
         <div style="display: flex; align-items: center; gap: 5px; background: #fff3cd; padding: 4px; border-radius: 4px; border: 1px solid #ffeeba;">
             <span style="font-size: 11px; color: #856404; font-weight: bold;">Sure?</span>
-            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #dc3545; color: white;" onclick="deleteItem(${id})">Yes</button>
+            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #dc3545; color: white;" onclick="deleteItem(${safeId})">Yes</button>
             <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #6c757d; color: white;" onclick="fetchItems()">No</button>
         </div>
     `;
@@ -371,7 +374,8 @@ function setupModal() {
                 quantity: document.getElementById('itemQuantity')?.value || 1,
                 location: document.getElementById('itemLocation')?.value,
                 image_path: document.getElementById('itemImage')?.value,
-                status: 'Available'
+                owner_name: document.getElementById('ownerName')?.value,
+                owner_phone: document.getElementById('ownerPhone')?.value
             };
 
             try {
@@ -387,6 +391,7 @@ function setupModal() {
                 fetchItems();
             } catch (err) {
                 console.error('Error adding new item:', err);
+                alert('Failed to save item. Please check inputs.');
             }
         });
     }

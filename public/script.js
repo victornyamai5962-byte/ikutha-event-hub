@@ -4,7 +4,6 @@
 
 const API_URL = "http://localhost:5000";
 
-// State
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 let allItems = [];
 
@@ -19,59 +18,29 @@ function showSuccessModal(message = "Your booking request has been successfully 
         modal = document.createElement("div");
         modal.id = "success-modal";
         modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 99999;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 99999; opacity: 0; transition: opacity 0.3s ease-in-out;
         `;
 
         modal.innerHTML = `
             <div id="universal-modal-card" style="
-                background: #ffffff;
-                padding: 32px 24px;
-                border-radius: 16px;
-                text-align: center;
-                max-width: 420px;
-                width: 88%;
+                background: #ffffff; padding: 32px 24px; border-radius: 16px;
+                text-align: center; max-width: 420px; width: 88%;
                 box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-                transform: translateY(-20px);
-                transition: transform 0.3s ease-in-out;
-                font-family: inherit;
+                transform: translateY(-20px); transition: transform 0.3s ease-in-out;
             ">
                 <div style="
-                    width: 64px;
-                    height: 64px;
-                    background: #e8f5e9;
-                    color: #2e7d32;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 32px;
-                    margin: 0 auto 16px auto;
+                    width: 64px; height: 64px; background: #e8f5e9; color: #2e7d32;
+                    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                    font-size: 32px; margin: 0 auto 16px auto;
                 ">✓</div>
-                <h2 style="margin: 0 0 8px 0; color: #1a1a1a; font-size: 22px; font-weight: 700;">Booking Received!</h2>
+                <h2 style="margin: 0 0 8px 0; color: #1a1a1a; font-size: 22px; font-weight: 700;">Booking Received</h2>
                 <p style="margin: 0 0 24px 0; color: #666666; font-size: 15px; line-height: 1.5;">${message}</p>
                 <button id="close-dynamic-success-btn" style="
-                    background: #2e7d32;
-                    color: #ffffff;
-                    border: none;
-                    padding: 12px 28px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-size: 15px;
-                    font-weight: 600;
-                    width: 100%;
-                    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
+                    background: #2e7d32; color: #ffffff; border: none; padding: 12px 28px;
+                    border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; width: 100%;
                 ">Awesome, got it!</button>
             </div>
         `;
@@ -79,7 +48,7 @@ function showSuccessModal(message = "Your booking request has been successfully 
         document.body.appendChild(modal);
 
         const closeBtn = document.getElementById("close-dynamic-success-btn");
-        closeBtn.addEventListener("click", hideSuccessModal);
+        if (closeBtn) closeBtn.addEventListener("click", hideSuccessModal);
         
         modal.addEventListener("click", (e) => {
             if (e.target === modal) hideSuccessModal();
@@ -110,24 +79,43 @@ function hideSuccessModal() {
 }
 
 // ==========================================
-// 2. TOAST NOTIFICATION
+// 2. SQUARE NOTIFICATIONS
 // ==========================================
 
-function showToast(message) {
-    let toast = document.getElementById("toast-notification");
-    if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "toast-notification";
-        toast.className = "toast-notification";
-        document.body.appendChild(toast);
+function showInlineNotice(targetElement, message, position = "top", type = "info") {
+    if (!targetElement) return;
+
+    const parentContainer = targetElement.parentElement;
+    const existingNotice = parentContainer.querySelector(".inline-cart-notice");
+    if (existingNotice) existingNotice.remove();
+
+    const notice = document.createElement("div");
+    notice.className = "inline-cart-notice";
+    
+    let bgColor = "#1976d2"; 
+    if (type === "success") bgColor = "#2e7d32"; 
+    if (type === "error") bgColor = "#d32f2f";   
+
+    notice.style.cssText = `
+        background: ${bgColor}; color: #ffffff; padding: 16px 24px; border-radius: 8px;
+        font-size: 15px; font-weight: 500; text-align: center; opacity: 0;
+        transition: opacity 0.25s ease-in-out; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        max-width: 320px; width: max-content; margin: ${position === "top" ? "0 auto 12px auto" : "12px auto 0 auto"};
+        z-index: 10; box-sizing: border-box; line-height: 1.4;
+    `;
+    notice.textContent = message;
+
+    if (position === "top") {
+        parentContainer.insertBefore(notice, targetElement);
+    } else {
+        parentContainer.appendChild(notice);
     }
 
-    toast.textContent = message;
-    toast.classList.add("show");
-
+    setTimeout(() => { notice.style.opacity = "1"; }, 10);
     setTimeout(() => {
-        toast.classList.remove("show");
-    }, 2500);
+        notice.style.opacity = "0";
+        setTimeout(() => { notice.remove(); }, 250);
+    }, 4500);
 }
 
 // ==========================================
@@ -136,7 +124,10 @@ function showToast(message) {
 
 function updateCartCount() {
     const cartCount = document.getElementById("cart-count");
-    if (cartCount) cartCount.textContent = cart.length;
+    if (cartCount) {
+        const totalItems = cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+        cartCount.textContent = totalItems;
+    }
 }
 
 function saveCart() {
@@ -144,16 +135,26 @@ function saveCart() {
     updateCartCount();
 }
 
-function addToCart(item) {
-    cart.push(item);
+function addToCart(item, eventTargetButton) {
+    const itemId = item.id || item.item_id;
+    const existingIndex = cart.findIndex(i => (i.id || i.item_id) === itemId);
+    
+    if (existingIndex > -1) {
+        cart[existingIndex].quantity = (Number(cart[existingIndex].quantity) || 1) + 1;
+    } else {
+        cart.push({ ...item, id: itemId, quantity: 1 });
+    }
+    
     saveCart();
-    showToast(`🛒 ${item.item_name} added to cart!`);
+    displayCart(); 
+
+    if (eventTargetButton) {
+        showInlineNotice(eventTargetButton, "✓ Added to cart!", "top", "success");
+    }
 }
 
-function bookNow(item) {
-    cart.push(item);
-    saveCart();
-
+function bookNow(item, eventTargetButton) {
+    addToCart(item, eventTargetButton);
     const booking = document.getElementById("booking-section");
     if (booking) {
         booking.classList.remove("hidden");
@@ -169,6 +170,24 @@ function removeCartItem(index) {
     saveCart();
     displayCart();
 }
+
+function changeQuantity(index, delta) {
+    let currentQty = Number(cart[index].quantity) || 1;
+    currentQty += delta;
+    
+    if (currentQty <= 0) {
+        cart.splice(index, 1);
+    } else {
+        cart[index].quantity = currentQty;
+    }
+    saveCart();
+    displayCart();
+}
+
+window.addToCartFromGlobal = (item, btn) => addToCart(item, btn);
+window.bookNowFromGlobal = (item, btn) => bookNow(item, btn);
+window.changeQuantity = changeQuantity;
+window.removeCartItem = removeCartItem;
 
 // ==========================================
 // 4. URL PARAMS & CATEGORY FETCHING
@@ -241,7 +260,7 @@ function displayItems(items) {
         container.innerHTML += `
         <div class="item-card">
             <img 
-                src="${item.image_path || 'images/no-image.jpg'}" 
+                src="${item.image_path ? `${API_URL}/${item.image_path}` : 'images/no-image.jpg'}" 
                 alt="${item.item_name}" 
                 onerror="this.onerror=null; this.src='images/no-image.jpg';"
             >
@@ -256,11 +275,11 @@ function displayItems(items) {
                         ${item.status}
                     </span>
                 </p>
-                <div class="card-actions">
-                    <button class="add-cart-btn" onclick='addToCart(${JSON.stringify(item)})' ${isDisabled ? "disabled" : ""}>
+                <div class="card-actions" style="display: flex; flex-direction: column; gap: 4px;">
+                    <button class="add-cart-btn" onclick='window.addToCartFromGlobal(${JSON.stringify(item)}, this)' ${isDisabled ? "disabled" : ""}>
                         🛒 Add to Cart
                     </button>
-                    <button class="book-btn" onclick='bookNow(${JSON.stringify(item)})' ${isDisabled ? "disabled" : ""}>
+                    <button class="book-btn" onclick='window.bookNowFromGlobal(${JSON.stringify(item)}, this)' ${isDisabled ? "disabled" : ""}>
                         ⚡ Book Now
                     </button>
                 </div>
@@ -280,37 +299,40 @@ function displayCart() {
     const modalCartItems = document.getElementById("modal-cart-items");
     const modalTotalAmount = document.getElementById("modal-total-amount");
 
-    if (!cartItems || !totalAmount) return;
-
-    cartItems.innerHTML = "";
-    if (modalCartItems) modalCartItems.innerHTML = "";
+    updateCartCount();
 
     let total = 0;
+    let cartHTML = "";
 
     if (cart.length === 0) {
-        cartItems.innerHTML = "<p>Your cart is empty.</p>";
-        if (modalCartItems) modalCartItems.innerHTML = "<p>Your cart is empty.</p>";
-        totalAmount.textContent = "0";
-        if (modalTotalAmount) modalTotalAmount.textContent = "0";
-        return;
+        cartHTML = "<p>Your cart is empty.</p>";
+    } else {
+        cart.forEach((item, index) => {
+            const qty = Number(item.quantity) || 1;
+            const price = Number(item.price) || 0;
+            const itemTotal = price * qty;
+            total += itemTotal;
+            
+            cartHTML += `
+            <div class="cart-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #ddd; padding-bottom:8px;">
+                <div>
+                    <strong>${item.item_name}</strong><br>
+                    <span>KSh ${price} x ${qty} = KSh ${itemTotal}</span>
+                </div>
+                <div>
+                    <button type="button" onclick="changeQuantity(${index}, 1)" style="padding:2px 8px; cursor:pointer;">+</button>
+                    <span style="margin:0 6px;">${qty}</span>
+                    <button type="button" onclick="changeQuantity(${index}, -1)" style="padding:2px 8px; cursor:pointer;">-</button>
+                    <button type="button" onclick="removeCartItem(${index})" style="background:red; color:white; border:none; padding:4px 8px; margin-left:8px; cursor:pointer;">Remove</button>
+                </div>
+            </div>
+            `;
+        });
     }
 
-    cart.forEach((item, index) => {
-        total += Number(item.price);
-        const cartHTML = `
-        <div class="cart-item">
-            <div>
-                <strong>${item.item_name}</strong><br>
-                KSh ${item.price}
-            </div>
-            <button onclick="removeCartItem(${index})">Remove</button>
-        </div>
-        `;
-        cartItems.innerHTML += cartHTML;
-        if (modalCartItems) modalCartItems.innerHTML += cartHTML;
-    });
-
-    totalAmount.textContent = total;
+    if (cartItems) cartItems.innerHTML = cartHTML;
+    if (modalCartItems) modalCartItems.innerHTML = cartHTML;
+    if (totalAmount) totalAmount.textContent = total;
     if (modalTotalAmount) modalTotalAmount.textContent = total;
 }
 
@@ -319,7 +341,6 @@ function displayCart() {
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Search bindings
     const searchBox = document.getElementById("search");
     if (searchBox) {
         searchBox.addEventListener("input", function() {
@@ -355,7 +376,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Cart Modal bindings
     const cartButton = document.getElementById("cart");
     const cartModal = document.getElementById("cart-modal");
     const closeCartModal = document.getElementById("close-cart-modal");
@@ -376,6 +396,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (proceedBookingBtn) {
         proceedBookingBtn.addEventListener("click", () => {
+            if (cart.length === 0) {
+                showInlineNotice(proceedBookingBtn, "Your cart is empty!", "top", "error");
+                return;
+            }
             if (cartModal) cartModal.classList.add("hidden");
             const booking = document.getElementById("booking-section");
             if (booking) {
@@ -386,11 +410,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.href = "index.html#booking-section";
             }
         });
-    }
-
-    const closeSuccessBtn = document.getElementById("close-success-btn");
-    if (closeSuccessBtn) {
-        closeSuccessBtn.addEventListener("click", hideSuccessModal);
     }
 
     window.addEventListener("click", (event) => {
@@ -410,17 +429,30 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingForm.addEventListener("submit", async function(e) {
             e.preventDefault();
 
+            const submitBtn = document.getElementById("submit-booking-btn") || e.submitter;
+
             if (cart.length === 0) {
-                showToast("Your cart is empty. Please add items before submitting!");
+                showInlineNotice(submitBtn, "Your cart is empty!", "top", "error");
                 return;
             }
 
-            const customerName = document.getElementById("customer-name")?.value;
-            const customerPhone = document.getElementById("customer-phone")?.value;
+            const customerName = document.getElementById("customer-name")?.value.trim();
+            const customerPhone = document.getElementById("customer-phone")?.value.trim();
             const eventDate = document.getElementById("event-date")?.value;
+            const eventLocation = document.getElementById("event-location")?.value.trim();
+
+            if (!customerName || !customerPhone || !eventDate || !eventLocation) {
+                showInlineNotice(submitBtn, "Please fill in all required fields including location!", "top", "error");
+                return;
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.dataset.originalText = submitBtn.textContent;
+                submitBtn.textContent = "Processing...";
+            }
 
             try {
-                // 1. Post customer data
                 const customerResponse = await fetch(`${API_URL}/customers`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -430,41 +462,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 const customerData = await customerResponse.json();
                 if (!customerResponse.ok) throw new Error(customerData.message || "Customer processing failed");
 
-                const total = cart.reduce((sum, item) => sum + Number(item.price), 0);
+                const customerId = customerData.customer_id;
 
-                // 2. Post booking request
+                const formattedItems = cart.map(item => ({
+                    item_id: item.id || item.item_id,
+                    price: item.price,
+                    quantity: Number(item.quantity) || 1
+                }));
+
                 const bookingResponse = await fetch(`${API_URL}/bookings`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        customer_id: customerData.customer_id,
-                        total_amount: total,
-                        event_date: eventDate
-                    })
-                });
-
-                const bookingData = await bookingResponse.json();
-                if (!bookingResponse.ok) throw new Error(bookingData.message || "Booking creation failed");
-
-                // 3. Post booking items formatted for database insertion
-                const formattedItems = cart.map(item => ({
-                    item_id: item.id,
-                    price: item.price
-                }));
-
-                await fetch(`${API_URL}/booking-items`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        booking_request_id: bookingData.booking_request_id,
+                        customer_id: customerId,
+                        event_date: eventDate,
+                        location: eventLocation,
                         items: formattedItems
                     })
                 });
 
-                // Trigger popup immediately on success
-                showSuccessModal();
+                const bookingData = await bookingResponse.json();
 
-                // Reset state
+                if (!bookingResponse.ok) {
+                    throw new Error(bookingData.message || "Selected items are unavailable.");
+                }
+
+                showSuccessModal("Your booking request has been received successfully! Our team will reach out shortly.");
+
                 cart = [];
                 saveCart();
                 displayCart();
@@ -472,18 +496,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const bookingSec = document.getElementById("booking-section");
                 if (bookingSec) bookingSec.classList.add("hidden");
-
                 if (cartModal) cartModal.classList.add("hidden");
 
             } catch (error) {
                 console.error("Booking submission error:", error);
-                showToast("Could not submit booking request. Please try again.");
+                showInlineNotice(submitBtn, error.message, "top", "error");
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitBtn.dataset.originalText || "Submit Booking";
+                }
             }
         });
     }
 });
 
-// Initial Page Load
 window.addEventListener("load", () => {
     updateCartCount();
     loadCategoryItems();
