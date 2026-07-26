@@ -330,3 +330,19 @@ table tr:hover {
 #saveCategoryBtn:hover {
     background-color: #27ae60;
 }
+
+/* ===================================
+   ADMIN FORM OVERLAP FIX
+=================================== */
+.modal-content select, 
+.form-group select {
+    position: relative !important;
+    z-index: 50 !important;
+    background-color: #ffffff !important;
+}
+
+.modal-content textarea, 
+.form-group textarea {
+    position: relative !important;
+    z-index: 1 !important;
+}
