@@ -47,6 +47,8 @@ const db = mysql.createPool({
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "Victor_5962",
     database: process.env.DB_NAME || "ikutha_event_hub",
+    port: process.env.DB_PORT || 3306,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -467,7 +469,7 @@ app.get("/admin/customers", (req, res) => {
             GROUP_CONCAT(DISTINCT br.status SEPARATOR ', ') AS booking_statuses
         FROM customers c
         LEFT JOIN booking_requests br ON c.id = br.customer_id
-        LEFT JOIN booking_request_items bri ON c.id = bri.booking_request_id -- adjusted join reference safety
+        LEFT JOIN booking_request_items bri ON c.id = bri.booking_request_id
         LEFT JOIN items i ON bri.item_id = i.id
         GROUP BY c.id
         ORDER BY c.id DESC
