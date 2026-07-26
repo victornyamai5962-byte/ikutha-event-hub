@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Category - Ikutha Event Hub</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<!-- ===================================
+     HEADER
+=================================== -->
+
+<header>
+
+    <div class="header-content">
+
+        <div id="cart">
+
+            Cart (<span id="cart-count">0</span>)
+
+        </div>
+
+        <h1 id="category-name">
+
+            Loading...
+
+        </h1>
+
+        <div class="search-area">
+
+            <input
+
+                type="text"
+
+                id="search"
+
+                placeholder="Search equipment or services..."
+
+            >
+
+        </div>
+
+    </div>
+
+</header>
+
+<!-- ===================================
+     MAIN
+=================================== -->
+
+<main>
+
+    <div class="back-home">
+
+        <a href="index.html">
+
+            ← Back to Categories
+
+        </a>
+
+    </div>
+
+    <!-- ===================================
+         CATEGORY ITEMS
+    ==================================== -->
+
+    <section id="selected-category">
+
+        <div id="items-container" class="items-grid">
+
+            <!-- Items loaded by script.js -->
+
+        </div>
+
+    </section>
+
+    <!-- ===================================
+         BOOKING SECTION
+    ==================================== -->
+
+    <section id="booking-section"
+             class="booking-section hidden">
+
+        <h2>Complete Your Booking</h2>
+
+        <form id="booking-form">
+
+            <input
+                type="text"
+                id="customer-name"
+                placeholder="Full Name"
+                required
+            >
+
+            <input
+                type="tel"
+                id="customer-phone"
+                placeholder="Phone Number"
+                required
+            >
+
+            <input
+                type="date"
+                id="event-date"
+                required
+            >
+
+            <h3>Selected Items</h3>
+
+            <div id="cart-items">
+
+                <!-- Cart items appear here -->
+
+            </div>
+
+            <div class="booking-total">
+
+                <strong>
+
+                    Total: KSh
+
+                    <span id="total-amount">0</span>
+
+                </strong>
+
+            </div>
+
+            <button
+                type="submit"
+                class="submit-booking-btn"
+            >
+
+                Submit Booking
+
+            </button>
+
+        </form>
+
+    </section>
+    <!-- ===================================
+         CART MODAL
+    ==================================== -->
+
+    <div id="cart-modal" class="cart-modal hidden">
+
+        <div class="cart-modal-content">
+
+            <span id="close-cart-modal"
+                  class="close-cart-modal">
+
+                &times;
+
+            </span>
+
+            <h2>Your Cart</h2>
+
+            <div id="modal-cart-items">
+
+                <p>Your cart is empty.</p>
+
+            </div>
+
+            <div class="booking-total">
+
+                <strong>
+
+                    Total: KSh
+                    <span id="modal-total-amount">0</span>
+
+                </strong>
+
+            </div>
+
+            <div class="modal-buttons">
+
+                <button
+                    id="proceed-booking-btn"
+                    class="submit-booking-btn"
+                >
+
+                    Proceed to Booking
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</main>
+
+<!-- ===================================
+     WHATSAPP
+=================================== -->
+
+<a
+
+    href="https://wa.me/254742210239"
+
+    class="whatsapp-button"
+
+    target="_blank"
+
+>
+
+    WhatsApp Us
+
+</a>
+
+<!-- ===================================
+     FOOTER
+=================================== -->
+
+<footer>
+
+    <p>
+
+        © 2026 Ikutha Event Hub. All Rights Reserved.
+
+    </p>
+
+</footer>
+
+<!-- ===================================
+     JAVASCRIPT
+=================================== -->
+
+<script src="script.js"></script>
+
+</body>
+
+</html>
