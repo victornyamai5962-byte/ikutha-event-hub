@@ -356,6 +356,21 @@ header #category-name{
     font-size:15px;
 }
 
+/* Fix category dropdown and inputs stacking layout */
+select, .category-select, .form-control {
+    position: relative;
+    z-index: 10;
+    display: block;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+textarea, .description-container {
+    position: relative;
+    z-index: 1;
+    margin-top: 10px;
+}
+
 #cart-items, #modal-cart-items{
     margin:20px 0;
 }
