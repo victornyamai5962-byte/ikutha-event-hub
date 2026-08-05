@@ -56,3 +56,46 @@ ALTER TABLE items
 ADD COLUMN owner_name VARCHAR(255) DEFAULT NULL,
 ADD COLUMN owner_phone VARCHAR(50) DEFAULT NULL;
 ALTER TABLE items MODIFY status VARCHAR(50) DEFAULT 'Available';
+
+CREATE TABLE IF NOT EXISTS categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT,
+    item_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    quantity INT DEFAULT 1,
+    location VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'Available',
+    image_path VARCHAR(255),
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS booking_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    event_date DATE,
+    location VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS booking_request_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_request_id INT,
+    item_id INT,
+    quantity INT,
+    price DECIMAL(10,2),
+    FOREIGN KEY (booking_request_id) REFERENCES booking_requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
