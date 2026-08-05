@@ -108,25 +108,14 @@ app.post("/customers", (req, res) => {
         return res.status(400).json({ message: "Phone number is required." });
     }
 
-    const checkSql = "SELECT id FROM customers WHERE phone_number = ?";
-    db.query(checkSql, [phone_number], (err, results) => {
+    // Always insert a new record so duplicate numbers create new rows
+    const insertSql = "INSERT INTO customers (full_name, phone_number) VALUES (?, ?)";
+    db.query(insertSql, [full_name || "Guest", phone_number], (err, result) => {
         if (err) {
             console.error(err);
             return res.status(500).json({ message: "Database error" });
         }
-
-        if (results.length > 0) {
-            return res.status(200).json({ customer_id: results[0].id });
-        }
-
-        const insertSql = "INSERT INTO customers (full_name, phone_number) VALUES (?, ?)";
-        db.query(insertSql, [full_name || "Guest", phone_number], (err, result) => {
-            if (err) {
-                console.error(err);
-                return res.status(500).json({ message: "Database error" });
-            }
-            res.status(201).json({ customer_id: result.insertId });
-        });
+        res.status(201).json({ customer_id: result.insertId });
     });
 });
 
@@ -177,7 +166,6 @@ app.delete("/categories/:id", (req, res) => {
 // ITEMS
 // ======================
 
-// Public items route - hides items marked as 'Vendor Item' so public customers don't see them
 app.get("/items", (req, res) => {
     const sql = `
         SELECT
@@ -208,7 +196,6 @@ app.get("/items", (req, res) => {
     });
 });
 
-// Admin items route - allows the admin dashboard to see ALL items including vendor items & owner info
 app.get("/admin/items", (req, res) => {
     const sql = `
         SELECT
@@ -438,7 +425,13 @@ app.get("/admin/bookings", (req, res) => {
             GROUP_CONCAT(DISTINCT CONCAT(i.item_name, ' (x', bri.quantity, ')') SEPARATOR ', ') AS items_requested,
             br.event_date,
             br.total_amount,
-            br.status
+            br.status,
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'item_id', bri.item_id,
+                    'quantity', bri.quantity
+                )
+            ) AS items_detail
         FROM booking_requests br
         LEFT JOIN customers c ON br.customer_id = c.id
         LEFT JOIN booking_request_items bri ON br.id = bri.booking_request_id
@@ -469,7 +462,7 @@ app.get("/admin/customers", (req, res) => {
             GROUP_CONCAT(DISTINCT br.status SEPARATOR ', ') AS booking_statuses
         FROM customers c
         LEFT JOIN booking_requests br ON c.id = br.customer_id
-        LEFT JOIN booking_request_items bri ON c.id = bri.booking_request_id
+        LEFT JOIN booking_request_items bri ON br.id = bri.booking_request_id
         LEFT JOIN items i ON bri.item_id = i.id
         GROUP BY c.id
         ORDER BY c.id DESC
@@ -503,29 +496,18 @@ app.put("/admin/bookings/:id", (req, res) => {
 
 app.delete("/admin/bookings/:id", (req, res) => {
     const bookingId = req.params.id;
-    const getBookingSql = "SELECT customer_id FROM booking_requests WHERE id = ?";
-    db.query(getBookingSql, [bookingId], (err, results) => {
-        if (err) return res.status(500).json({ message: "Database error" });
-        if (results.length === 0) return res.status(404).json({ message: "Booking not found" });
 
-        const customerId = results[0].customer_id;
-        const deleteItemsSql = "DELETE FROM booking_request_items WHERE booking_request_id = ?";
-        db.query(deleteItemsSql, [bookingId], (err) => {
-            if (err) return res.status(500).json({ message: "Error deleting booking items" });
+    // Delete booking items first (foreign key dependency)
+    const deleteItemsSql = "DELETE FROM booking_request_items WHERE booking_request_id = ?";
+    db.query(deleteItemsSql, [bookingId], (err) => {
+        if (err) return res.status(500).json({ message: "Error deleting booking items" });
 
-            const deleteBookingSql = "DELETE FROM booking_requests WHERE id = ?";
-            db.query(deleteBookingSql, [bookingId], (err) => {
-                if (err) return res.status(500).json({ message: "Error deleting booking request" });
+        // Delete booking request itself (Customer table record is preserved)
+        const deleteBookingSql = "DELETE FROM booking_requests WHERE id = ?";
+        db.query(deleteBookingSql, [bookingId], (err) => {
+            if (err) return res.status(500).json({ message: "Error deleting booking request" });
 
-                if (customerId) {
-                    const deleteCustomerSql = "DELETE FROM customers WHERE id = ?";
-                    db.query(deleteCustomerSql, [customerId], (err) => {
-                        if (err) console.error("Error clearing customer record:", err);
-                    });
-                }
-
-                res.json({ message: "Booking and customer data cleared successfully" });
-            });
+            res.json({ message: "Booking cleared successfully. Customer record preserved." });
         });
     });
 });

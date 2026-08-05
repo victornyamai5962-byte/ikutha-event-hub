@@ -1,443 +1,1160 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000' 
-    : 'https://ikutha-event-hub.onrender.com';
+/* ============================================================
+   IKUTHA EVENT HUB
+   ADMIN DASHBOARD
+============================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
+// ============================================================
+// API CONFIGURATION
+// ============================================================
+
+const API_BASE_URL =
+    window.location.hostname === "localhost"
+        ? "http://localhost:5000"
+        : "https://ikutha-event-hub.onrender.com";
+
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+
+const App = {
+    bookings: [],
+    customers: [],
+    items: [],
+    categories: [],
+    refreshInterval: null
+};
+
+// Stores the record waiting to be deleted
+let pendingDelete = {
+    type: null,
+    id: null,
+    label: ""
+};
+
+// ============================================================
+// APPLICATION STARTUP
+// ============================================================
+
+document.addEventListener("DOMContentLoaded", initializeAdmin);
+
+async function initializeAdmin() {
+
     setupTabNavigation();
+
     setupModal();
-    
-    // Initial data load
-    fetchBookings();
-    fetchItems();
-    fetchCategories();
-    fetchCustomers();
 
-    setInterval(() => {
-        fetchBookings();
+    setupUniversalSearch(); // <--- Initializes the fixed search engine
+
+    await loadAllData();
+
+    startAutoRefresh();
+
+}
+
+// ============================================================
+// UNIVERSAL SEARCH ENGINE (Fixed for Dashboard & All Sections)
+// ============================================================
+
+function setupUniversalSearch() {
+    const searchInput = document.querySelector(".top-header .search-box input, #itemSearch");
+
+    if (!searchInput) return;
+
+    function executeSearch() {
+        const query = searchInput.value.toLowerCase().trim();
+        
+        // Find the currently active section
+        const activeSection = document.querySelector("section:not([style*='display: none'])") || document.getElementById("dashboard");
+        if (!activeSection) return;
+
+        // Search within table rows across any active tab or dynamic dashboard view
+        const rows = activeSection.querySelectorAll("tbody tr");
+        if (rows.length > 0) {
+            rows.forEach(row => {
+                const textContent = row.textContent.toLowerCase();
+                if (textContent.includes(query) || query === "") {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+    }
+
+    // Filter live as you type letters
+    searchInput.addEventListener("input", executeSearch);
+
+    // Prevent page reload and keep search results active if Enter is pressed
+    searchInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault(); // Stops form submission or page refresh
+            executeSearch();
+        }
+    });
+}
+
+// ============================================================
+// LOAD ALL DATA
+// ============================================================
+
+async function loadAllData() {
+
+    try {
+
+        await Promise.all([
+            fetchBookings(),
+            fetchItems(),
+            fetchCategories(),
+            fetchCustomers()
+        ]);
+
+    } catch (error) {
+
+        console.error("Dashboard Load Error:", error);
+
+    }
+
+}
+
+// ============================================================
+// AUTO REFRESH
+// ============================================================
+
+function startAutoRefresh() {
+
+    if (App.refreshInterval) {
+
+        clearInterval(App.refreshInterval);
+
+    }
+
+    App.refreshInterval = setInterval(async () => {
+
+        await fetchBookings();
+
     }, 5000);
-});
 
-// ======================
-// 1. TAB NAVIGATION
-// ======================
-function setupTabNavigation() {
-    const navButtons = {
-        'dashboardBtn': 'dashboard',
-        'categoriesBtn': 'categories',
-        'itemsBtn': 'items',
-        'bookingsBtn': 'bookingRequests',
-        'customersBtn': 'customers'
+}
+
+// ============================================================
+// SIMPLE API HELPER
+// ============================================================
+
+async function api(url, options = {}) {
+
+    const response = await fetch(`${API_BASE_URL}${url}`, options);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+
+        throw new Error(data.message || "Server Error");
+
+    }
+
+    return data;
+
+}
+// ============================================================
+// DELETE CONFIRMATION MODAL
+// ============================================================
+
+function openCenteredDeleteModal(type, id, label) {
+
+    pendingDelete = {
+        type,
+        id: Number(id),
+        label
     };
 
-    const sections = ['dashboard', 'categories', 'items', 'bookingRequests', 'customers'];
+    let modal = document.getElementById("centeredDeleteModal");
 
-    Object.keys(navButtons).forEach(btnId => {
+    if (!modal) {
+
+        modal = document.createElement("div");
+        modal.id = "centeredDeleteModal";
+        document.body.appendChild(modal);
+
+    }
+
+    modal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+    `;
+
+    modal.innerHTML = `
+        <div style="
+            background:#fff;
+            width:90%;
+            max-width:400px;
+            border-radius:16px;
+            padding:28px;
+            text-align:center;
+            box-shadow:0 20px 40px rgba(0,0,0,.25);
+        ">
+
+            <div style="
+                width:60px;
+                height:60px;
+                margin:auto;
+                border-radius:50%;
+                background:#fee2e2;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:28px;
+            ">
+                🗑️
+            </div>
+
+            <h2 style="margin-top:15px;">
+                Delete?
+            </h2>
+
+            <p style="color:#666;">
+                Are you sure you want to delete
+                <br><br>
+                <strong>${label}</strong>
+            </p>
+
+            <div style="
+                display:flex;
+                justify-content:center;
+                gap:12px;
+                margin-top:25px;
+            ">
+
+                <button
+                    onclick="confirmCenteredDelete()"
+                    style="
+                        background:#dc2626;
+                        color:#fff;
+                        border:none;
+                        padding:10px 20px;
+                        border-radius:8px;
+                        cursor:pointer;
+                    ">
+                    Delete
+                </button>
+
+                <button
+                    onclick="closeCenteredDeleteModal()"
+                    style="
+                        background:#e5e7eb;
+                        border:none;
+                        padding:10px 20px;
+                        border-radius:8px;
+                        cursor:pointer;
+                    ">
+                    Cancel
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+    modal.style.display = "flex";
+
+}
+
+function closeCenteredDeleteModal() {
+
+    const modal = document.getElementById("centeredDeleteModal");
+
+    if (modal) {
+
+        modal.style.display = "none";
+
+    }
+
+    pendingDelete = {
+        type: null,
+        id: null,
+        label: ""
+    };
+
+}
+
+async function confirmCenteredDelete() {
+
+    if (!pendingDelete.id || !pendingDelete.type) return;
+
+    try {
+
+        let endpoint = "";
+
+        switch (pendingDelete.type) {
+
+            case "category":
+                endpoint = `/categories/${pendingDelete.id}`;
+                break;
+
+            case "item":
+                endpoint = `/items/${pendingDelete.id}`;
+                break;
+
+            case "booking":
+                endpoint = `/admin/bookings/${pendingDelete.id}`;
+                break;
+
+            default:
+                return;
+
+        }
+
+        await api(endpoint, {
+            method: "DELETE"
+        });
+
+        closeCenteredDeleteModal();
+
+        if (pendingDelete.type === "category") {
+
+            fetchCategories();
+            fetchItems();
+
+        }
+
+        if (pendingDelete.type === "item") {
+
+            fetchItems();
+
+        }
+
+        if (pendingDelete.type === "booking") {
+
+            fetchBookings();
+            fetchCustomers();
+            fetchItems(); // Refresh stock tracking on delete
+
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(error.message);
+
+    }
+
+}
+// ============================================================
+// TAB NAVIGATION SETUP
+// ============================================================
+
+function setupTabNavigation() {
+    const navMap = {
+        dashboardBtn: "dashboard",
+        categoriesBtn: "categories",
+        itemsBtn: "items",
+        bookingsBtn: "bookingRequests",
+        customersBtn: "customers"
+    };
+
+    Object.keys(navMap).forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
-            btn.addEventListener('click', () => {
-                const targetSectionId = navButtons[btnId];
-                sections.forEach(secId => {
-                    const sec = document.getElementById(secId);
-                    if (sec) sec.style.display = 'none';
+            btn.addEventListener("click", () => {
+                // Remove active class from all navigation buttons
+                Object.keys(navMap).forEach(id => {
+                    const otherBtn = document.getElementById(id);
+                    if (otherBtn) otherBtn.classList.remove("active");
                 });
-                const targetSection = document.getElementById(targetSectionId);
-                if (targetSection) targetSection.style.display = 'block';
                 
-                if (targetSectionId === 'customers') {
-                    fetchCustomers();
+                // Add active class to the clicked button
+                btn.classList.add("active");
+
+                // Hide all main sections
+                Object.values(navMap).forEach(secId => {
+                    const section = document.getElementById(secId);
+                    if (section) section.style.display = "none";
+                });
+
+                // Show the target section
+                const targetSection = document.getElementById(navMap[btnId]);
+                if (targetSection) targetSection.style.display = "block";
+
+                // Clear search input when switching tabs for a clean experience
+                const searchInput = document.querySelector(".top-header .search-box input, #itemSearch");
+                if (searchInput) searchInput.value = "";
+
+                // Refresh view if returning to dashboard
+                if (btnId === "dashboardBtn") {
+                    fetchBookings();
                 }
             });
         }
     });
-
-    sections.forEach(secId => {
-        const sec = document.getElementById(secId);
-        if (sec) sec.style.display = secId === 'dashboard' ? 'block' : 'none';
-    });
 }
+// ======================
+// DASHBOARD STATS & RECENT ACTIVITY
+// ======================
+function updateDashboardStats(bookings, items, customers) {
+    const dashboardSection = document.getElementById('dashboard');
+    if (!dashboardSection) return;
 
+    const totalBookings = bookings.length;
+    const pendingBookings = bookings.filter(
+        b => (b.status || '').toLowerCase() === 'pending'
+    ).length;
+    const totalItems = items.length;
+    const totalCustomers = customers.length;
+
+    const recentBookings = [...bookings].reverse().slice(0, 5);
+
+    // Dynamic time-based greeting calculation keeping only the time greeting wave
+    const currentHour = new Date().getHours();
+    let timeGreeting = "Welcome";
+
+    if (currentHour < 12) {
+        timeGreeting = "Good Morning";
+    } else if (currentHour < 17) {
+        timeGreeting = "Good Afternoon";
+    } else {
+        timeGreeting = "Good Evening";
+    }
+
+    dashboardSection.innerHTML = `
+        <div class="dashboard-container">
+            <h2 class="dashboard-title">${timeGreeting}, Administrator 👋</h2>
+            <p class="dashboard-subtitle">
+                Here is an overview of your event rental operations.
+            </p>
+
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div>
+                        <h4>Total Bookings</h4>
+                        <div class="stat-value">${totalBookings}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div>
+                        <h4>Pending</h4>
+                        <div class="stat-value">${pendingBookings}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div>
+                        <h4>Items</h4>
+                        <div class="stat-value">${totalItems}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div>
+                        <h4>Customers</h4>
+                        <div class="stat-value">${totalCustomers}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-actions" style="display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;">
+                <button class="quick-btn"
+                    onclick="document.getElementById('bookingsBtn').click()"
+                    style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); display: inline-flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
+                    📋 View Bookings
+                </button>
+
+                <button class="quick-btn"
+                    onclick="document.getElementById('itemsBtn').click();setTimeout(()=>document.querySelector('.addItemBtn, #addItemBtn')?.click(),100)"
+                    style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); display: inline-flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
+                    ➕ Add Item
+                </button>
+
+                <button class="quick-btn"
+                    onclick="document.getElementById('categoriesBtn').click();setTimeout(()=>document.querySelector('.addCategoryBtn, #addCategoryBtn')?.click(),100)"
+                    style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25); display: inline-flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;">
+                    📁 Add Category
+                </button>
+            </div>
+
+            <div class="recent-section">
+                <h3>Recent Booking Requests</h3>
+
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${
+                            recentBookings.length === 0
+                                ? `
+                                <tr>
+                                    <td colspan="4" style="text-align:center">
+                                        No recent bookings found
+                                    </td>
+                                </tr>
+                                `
+                                : recentBookings
+                                      .map(
+                                          b => `
+                                    <tr>
+                                        <td>#${b.id}</td>
+                                        <td>${b.customer_name || 'N/A'}</td>
+                                        <td>${b.items_requested || 'N/A'}</td>
+                                        <td>
+                                            <span class="badge badge-${(b.status || 'pending').toLowerCase()}">
+                                                ${b.status || 'Pending'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `
+                                      )
+                                      .join('')
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    // Inject enhanced styling for action buttons matching the website's polished design theme
+    const styleId = "dashboard-action-buttons-style";
+    if (!document.getElementById(styleId)) {
+        const styleTag = document.createElement("style");
+        styleTag.id = styleId;
+        styleTag.innerHTML = `
+            .quick-btn:hover {
+                transform: translateY(-2px);
+                filter: brightness(1.1);
+            }
+            .quick-btn:active {
+                transform: translateY(0);
+            }
+        `;
+        document.head.appendChild(styleTag);
+    }
+}
 // ======================
-// 2. BOOKINGS MANAGEMENT & BADGE
+// BOOKINGS MANAGEMENT
 // ======================
+
 async function fetchBookings() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/bookings`);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        
-        const bookings = await response.json();
+        const [bookingsRes, itemsRes, customersRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/admin/bookings`),
+            fetch(`${API_BASE_URL}/admin/items`),
+            fetch(`${API_BASE_URL}/admin/customers`)
+        ]);
 
-        const pendingCount = bookings.filter(b => {
-            const status = (b.status || '').toString().trim().toLowerCase();
-            return status === 'pending';
-        }).length;
+        const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
+        const items = itemsRes.ok ? await itemsRes.json() : [];
+        const customers = customersRes.ok ? await customersRes.json() : [];
+
+        // Save data to global app state and safely update dashboard stats counters
+        App.bookings = bookings;
+        App.items = items;
+        App.customers = customers;
+        updateDashboardStats(bookings, items, customers);
+
+        const pendingCount = bookings.filter(
+            b => (b.status || "").toLowerCase() === "pending"
+        ).length;
 
         updateBookingBadge(pendingCount);
 
-        const tbody = document.getElementById('bookingTableBody');
+        const tbody = document.getElementById("bookingTableBody");
         if (!tbody) return;
-        
-        tbody.innerHTML = '';
+
+        tbody.innerHTML = "";
+
+        if (bookings.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center">No bookings found.</td></tr>`;
+            return;
+        }
 
         bookings.forEach(b => {
-            const tr = document.createElement('tr');
-            const statusLower = (b.status || 'pending').toString().trim().toLowerCase();
+            const tr = document.createElement("tr");
+
+            const bookingName = b.customer_name
+                ? `Booking #${b.id} (${b.customer_name})`
+                : `Booking #${b.id}`;
 
             tr.innerHTML = `
                 <td>#${b.id}</td>
-                <td>${b.customer_name || 'N/A'}</td>
-                <td>${b.phone || 'N/A'}</td>
-                <td>${b.categories || 'N/A'}</td>
-                <td>${b.items_requested || 'N/A'}</td>
-                <td>${b.location || 'N/A'}</td>
-                <td><span class="booking-date">${b.event_date ? new Date(b.event_date).toLocaleDateString() : 'N/A'}</span></td>
-                <td><span class="badge badge-${statusLower}">${b.status || 'Pending'}</span></td>
+                <td>${b.customer_name || "N/A"}</td>
+                <td>${b.phone || "N/A"}</td>
+                <td>${b.categories || "N/A"}</td>
+                <td>${b.items_requested || "N/A"}</td>
+                <td>${b.location || "N/A"}</td>
+                <td>${
+                    b.event_date
+                        ? new Date(b.event_date).toLocaleDateString()
+                        : "N/A"
+                }</td>
                 <td>
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        <button class="btn btn-success" style="padding: 5px 8px; font-size: 11px;" onclick="updateBookingStatus(${b.id}, 'Confirmed')">Confirm</button>
-                        <button class="btn btn-danger" style="padding: 5px 8px; font-size: 11px;" onclick="updateBookingStatus(${b.id}, 'Cancelled')">Cancel</button>
-                        <button class="btn" style="padding: 5px 8px; font-size: 11px; background-color: #dc3545; color: white;" onclick="showBookingDeleteConfirm(this, ${b.id})">Delete</button>
+                    <span class="badge badge-${(b.status || "pending").toLowerCase()}">
+                        ${b.status || "Pending"}
+                    </span>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <button
+                            onclick="updateBookingStatus(${b.id},'Confirmed')"
+                            style="background: #dcfce7; color: #166534; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s;"
+                            onmouseover="this.style.background='#bbf7d0'"
+                            onmouseout="this.style.background='#dcfce7'">
+                            ✓ Confirm
+                        </button>
+
+                        <button
+                            onclick="updateBookingStatus(${b.id},'Cancelled')"
+                            style="background: #fef3c7; color: #92400e; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s;"
+                            onmouseover="this.style.background='#fde68a'"
+                            onmouseout="this.style.background='#fef3c7'">
+                            ✕ Cancel
+                        </button>
+
+                        <button
+                            onclick="openCenteredDeleteModal('booking',${b.id},'${bookingName.replace(/'/g,"\\'")}')"
+                            style="background: #fee2e2; color: #991b1b; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s;"
+                            onmouseover="this.style.background='#fecaca'"
+                            onmouseout="this.style.background='#fee2e2'">
+                            🗑 Delete
+                        </button>
                     </div>
                 </td>
             `;
+
             tbody.appendChild(tr);
         });
+
     } catch (err) {
-        console.error('Error fetching bookings:', err);
+        console.error("Error fetching bookings:", err);
     }
 }
 
 function updateBookingBadge(count) {
-    let badge = document.getElementById('bookingBadge');
+
+    let badge = document.getElementById("bookingBadge");
+
     if (!badge) {
-        const bookingsBtn = document.getElementById('bookingsBtn');
+        const bookingsBtn = document.getElementById("bookingsBtn");
+
         if (bookingsBtn) {
-            badge = document.createElement('span');
-            badge.id = 'bookingBadge';
-            badge.className = 'badge-count';
+            badge = document.createElement("span");
+            badge.id = "bookingBadge";
+            badge.className = "badge-count";
             bookingsBtn.appendChild(badge);
         }
     }
 
-    if (badge) {
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
+    if (!badge) return;
+
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = "inline-block";
+    } else {
+        badge.style.display = "none";
     }
 }
 
 async function updateBookingStatus(id, status) {
+
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/bookings/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        
+
+        const response = await fetch(
+            `${API_BASE_URL}/admin/bookings/${id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ status })
+            }
+        );
+
         const result = await response.json();
+
         if (!response.ok) {
-            throw new Error(result.message || 'Failed to update booking status');
+            throw new Error(result.message || "Failed to update booking");
         }
-        
-        fetchBookings();
-    } catch (err) {
-        console.error('Failed to update booking status:', err);
-        alert('Error updating status: ' + err.message);
-    }
-}
-
-function showBookingDeleteConfirm(buttonElement, id) {
-    const container = buttonElement.closest('div');
-    if (!container) return;
-
-    const safeId = parseInt(id, 10);
-
-    container.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 5px; background: #fff3cd; padding: 4px; border-radius: 4px; border: 1px solid #ffeeba;">
-            <span style="font-size: 11px; color: #856404; font-weight: bold;">Sure?</span>
-            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #dc3545; color: white;" onclick="deleteBooking(${safeId})">Yes</button>
-            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #6c757d; color: white;" onclick="fetchBookings()">No</button>
-        </div>
-    `;
-}
-
-async function deleteBooking(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/admin/bookings/${id}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) throw new Error('Failed to delete booking request');
 
         fetchBookings();
-        fetchCustomers();
+        fetchItems(); // Automatically updates the live stock counts when status changes (Confirmed/Cancelled)
+
     } catch (err) {
-        console.error('Error deleting booking:', err);
+        console.error(err);
+        alert(err.message);
     }
 }
+// ======================
+// CUSTOMERS MANAGEMENT
+// ======================
 
-// ======================
-// 3. CUSTOMERS MANAGEMENT
-// ======================
 async function fetchCustomers() {
+
     try {
+
         const response = await fetch(`${API_BASE_URL}/admin/customers`);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
+        }
 
         const customers = await response.json();
-        const tbody = document.getElementById('customerTableBody');
+        App.customers = customers; // Update state
+
+        const tbody = document.getElementById("customerTableBody");
+
         if (!tbody) return;
 
-        tbody.innerHTML = '';
+        tbody.innerHTML = "";
 
-        if (!Array.isArray(customers) || customers.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No customers found.</td></tr>`;
+        if (!customers.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center">
+                        No customers found.
+                    </td>
+                </tr>
+            `;
             return;
         }
 
         customers.forEach(customer => {
-            const tr = document.createElement('tr');
-            
-            let formattedDate = 'N/A';
-            if (customer.created_at) {
-                formattedDate = new Date(customer.created_at).toLocaleString();
-            }
 
-            const statusLower = (customer.booking_statuses || '').toString().trim().toLowerCase();
+            const tr = document.createElement("tr");
+
+            const createdDate = customer.created_at
+                ? new Date(customer.created_at).toLocaleString()
+                : "N/A";
+
+            const badgeClass = (customer.booking_statuses || "")
+                .toLowerCase()
+                .replace(/\s+/g, "-");
 
             tr.innerHTML = `
                 <td>#${customer.id}</td>
-                <td>${customer.full_name || 'N/A'}</td>
-                <td>${customer.phone_number || 'N/A'}</td>
-                <td>${customer.items_ordered || 'No orders yet'}</td>
-                <td>${customer.event_locations || 'N/A'}</td>
-                <td><span class="badge badge-${statusLower}">${customer.booking_statuses || 'N/A'}</span></td>
-                <td>${formattedDate}</td>
+                <td>${customer.full_name || "N/A"}</td>
+                <td>${customer.phone_number || "N/A"}</td>
+                <td>${customer.items_ordered || "No orders yet"}</td>
+                <td>${customer.event_locations || "N/A"}</td>
+                <td>
+                    <span class="badge badge-${badgeClass}">
+                        ${customer.booking_statuses || "N/A"}
+                    </span>
+                </td>
+                <td>${createdDate}</td>
             `;
+
             tbody.appendChild(tr);
+
         });
+
     } catch (err) {
-        console.error('Error fetching customers:', err);
+
+        console.error("Error fetching customers:", err);
+
     }
+
 }
+// ======================
+// ITEMS & STOCK MANAGEMENT
+// ======================
 
-// ======================
-// 4. ITEMS MANAGEMENT
-// ======================
 async function fetchItems() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/admin/items`);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-        const items = await response.json();
-        const tbody = document.getElementById('itemTableBody');
+    try {
+        // Fetch items and bookings together to compute live remaining stock
+        const [itemsRes, bookingsRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/admin/items`),
+            fetch(`${API_BASE_URL}/admin/bookings`)
+        ]);
+
+        if (!itemsRes.ok) {
+            throw new Error(`HTTP Error ${itemsRes.status}`);
+        }
+
+        const items = await itemsRes.json();
+        const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
+        
+        App.items = items; // Update state
+
+        // Calculate total booked quantities per item from Confirmed or active bookings
+        const bookedCounts = {};
+        bookings.forEach(b => {
+            const bStatus = (b.status || "").toLowerCase();
+            // Count stock for confirmed or pending bookings (exclude cancelled)
+            if (bStatus !== "cancelled") {
+                if (b.items_detail && Array.isArray(b.items_detail)) {
+                    b.items_detail.forEach(bi => {
+                        bookedCounts[bi.item_id] = (bookedCounts[bi.item_id] || 0) + Number(bi.quantity || 0);
+                    });
+                }
+            }
+        });
+
+        const tbody = document.getElementById("itemTableBody");
+
         if (!tbody) return;
 
-        tbody.innerHTML = '';
+        tbody.innerHTML = "";
+
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center">No items found.</td></tr>`;
+            return;
+        }
 
         items.forEach(item => {
-            const tr = document.createElement('tr');
-            const formattedPrice = item.price ? `KES ${item.price} / day` : 'N/A';
-            const itemQty = item.quantity || 1;
+
+            const tr = document.createElement("tr");
+
+            const image = item.image_path
+                ? `<img src="${API_BASE_URL}/${item.image_path}" width="40" height="40" style="object-fit:cover;border-radius:4px;">`
+                : "No Image";
+
+            const price = item.price
+                ? `KES ${item.price} / day`
+                : "N/A";
+
+            const originalQty = Number(item.quantity || 1);
             
-            const ownerName = item.owner_name ? item.owner_name : 'In-House';
-            const ownerPhone = item.owner_phone ? item.owner_phone : 'N/A';
+            // Fallback: parse booked quantity or default to 0
+            const bookedQty = bookedCounts[item.id] || 0;
+            const remainingStock = Math.max(0, originalQty - bookedQty);
+
+            const ownerName = item.owner_name || "In-House";
+            const ownerPhone = item.owner_phone || "N/A";
 
             tr.innerHTML = `
                 <td>${item.id}</td>
-                <td>${item.image_path ? `<img src="${API_BASE_URL}/${item.image_path}" width="40" height="40" style="object-fit:cover; border-radius:4px;">` : 'No image'}</td>
+                <td>${image}</td>
                 <td>${item.item_name}</td>
                 <td>${item.category_name || item.category_id}</td>
-                <td>${formattedPrice}</td>
-                <td><strong>${itemQty}</strong></td>
+                <td>${price}</td>
+                <td>${originalQty}</td>
+                <td style="color: #d97706; font-weight: 600;">${bookedQty}</td>
+                <td style="color: #0d47a1; font-weight: 700;">${remainingStock}</td>
                 <td>${ownerName}</td>
                 <td>${ownerPhone}</td>
                 <td>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="btn-delete" style="background-color: #dc3545; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer;" onclick="showItemDeleteConfirm(this, ${item.id})">Delete</button>
-                    </div>
+                    <button
+                        class="btn btn-danger"
+                        onclick="openCenteredDeleteModal('item', ${item.id}, '${item.item_name.replace(/'/g, "\\'")}')"
+                        style="background: #fee2e2; color: #991b1b; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s;"
+                        onmouseover="this.style.background='#fecaca'"
+                        onmouseout="this.style.background='#fee2e2'">
+                        🗑 Delete
+                    </button>
                 </td>
             `;
+
             tbody.appendChild(tr);
+
         });
+
     } catch (err) {
-        console.error('Error fetching items:', err);
+
+        console.error("Error fetching items:", err);
+
     }
+
 }
-
-function showItemDeleteConfirm(buttonElement, id) {
-    const container = buttonElement.closest('div');
-    if (!container) return;
-
-    const safeId = parseInt(id, 10);
-
-    container.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 5px; background: #fff3cd; padding: 4px; border-radius: 4px; border: 1px solid #ffeeba;">
-            <span style="font-size: 11px; color: #856404; font-weight: bold;">Sure?</span>
-            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #dc3545; color: white;" onclick="deleteItem(${safeId})">Yes</button>
-            <button class="btn" style="padding: 3px 6px; font-size: 10px; background-color: #6c757d; color: white;" onclick="fetchItems()">No</button>
-        </div>
-    `;
-}
-
-async function deleteItem(id) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/items/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Failed to delete item');
-        fetchItems();
-    } catch (err) {
-        console.error('Error deleting item:', err);
-    }
-}
-
 // ======================
-// 5. CATEGORIES MANAGEMENT
+// CATEGORIES MANAGEMENT
 // ======================
+
 async function fetchCategories() {
+
     try {
+
         const response = await fetch(`${API_BASE_URL}/categories`);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
+        }
 
         const categories = await response.json();
-        const tbody = document.getElementById('categoryTableBody');
+        App.categories = categories; // Update state
+
+        // Categories Table
+        const tbody = document.getElementById("categoryTableBody");
+
         if (tbody) {
-            tbody.innerHTML = '';
-            categories.forEach(cat => {
-                const tr = document.createElement('tr');
+
+            tbody.innerHTML = "";
+
+            if (categories.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center">No categories found.</td></tr>`;
+            }
+
+            categories.forEach(category => {
+
+                const tr = document.createElement("tr");
+
                 tr.innerHTML = `
-                    <td>${cat.id}</td>
-                    <td>${cat.category_name}</td>
+                    <td>${category.id}</td>
+                    <td>${category.category_name}</td>
                     <td>
-                        <button class="btn-delete" onclick="deleteCategory(${cat.id})">Delete</button>
+                        <button
+                            class="btn btn-danger"
+                            onclick="openCenteredDeleteModal(
+                                'category',
+                                ${category.id},
+                                '${category.category_name.replace(/'/g, "\\'")}'
+                            )"
+                            style="background: #fee2e2; color: #991b1b; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s;"
+                            onmouseover="this.style.background='#fecaca'"
+                            onmouseout="this.style.background='#fee2e2'">
+                            🗑 Delete
+                        </button>
                     </td>
                 `;
+
                 tbody.appendChild(tr);
+
             });
+
         }
 
-        const select = document.getElementById('itemCategory');
+        // Populate Item Category Dropdown
+        const select = document.getElementById("itemCategory");
+
         if (select) {
-            select.innerHTML = '<option value="">Select Category</option>';
-            categories.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat.id;
-                opt.textContent = cat.category_name;
-                select.appendChild(opt);
+
+            select.innerHTML = `<option value="">Select Category</option>`;
+
+            categories.forEach(category => {
+
+                const option = document.createElement("option");
+
+                option.value = category.id;
+                option.textContent = category.category_name;
+
+                select.appendChild(option);
+
             });
+
         }
-    } catch (err) {
-        console.error('Error fetching categories:', err);
-    }
-}
 
-async function deleteCategory(id) {
-    if (!confirm('Are you sure you want to delete this category?')) return;
-    try {
-        const response = await fetch(`${API_BASE_URL}/categories/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Failed to delete category');
-        fetchCategories();
     } catch (err) {
-        console.error('Error deleting category:', err);
-    }
-}
 
+        console.error("Error fetching categories:", err);
+
+    }
+
+}
 // ======================
-// 6. MODAL FORM HANDLING
+// MODAL & FORM HANDLING
 // ======================
+
 function setupModal() {
-    // Item Modal Handling
-    const itemModal = document.getElementById('itemModal');
-    const openItemBtn = document.getElementById('addItemBtn');
-    const closeItemBtn = document.getElementById('closeItemModal');
-    const itemForm = document.getElementById('addItemForm');
 
-    if (openItemBtn && itemModal) {
-        openItemBtn.addEventListener('click', () => {
-            itemModal.style.display = 'flex';
-        });
+    // Style elements injected globally for Add Item / Add Category buttons and Modal Form Save/Cancel buttons
+    const styleId = "global-action-buttons-style";
+    if (!document.getElementById(styleId)) {
+        const styleTag = document.createElement("style");
+        styleTag.id = styleId;
+        styleTag.innerHTML = `
+            #addItemBtn, .addItemBtn, #addCategoryBtn, .addCategoryBtn {
+                background: linear-gradient(135deg, #10b981, #059669) !important;
+                color: #fff !important;
+                border: none !important;
+                padding: 10px 20px !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+                transition: transform 0.2s, box-shadow 0.2s !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+            }
+            #addItemBtn:hover, .addItemBtn:hover, #addCategoryBtn:hover, .addCategoryBtn:hover {
+                transform: translateY(-2px) !important;
+                filter: brightness(1.1) !important;
+            }
+            
+            /* Professional styling for modal submit/save and cancel buttons */
+            #addItemForm button[type="submit"], #addCategoryForm button[type="submit"] {
+                background: linear-gradient(135deg, #10b981, #059669) !important;
+                color: #fff !important;
+                border: none !important;
+                padding: 10px 20px !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+                transition: filter 0.2s, transform 0.2s !important;
+            }
+            #addItemForm button[type="submit"]:hover, #addCategoryForm button[type="submit"]:hover {
+                filter: brightness(1.1);
+                transform: translateY(-1px);
+            }
+            
+            #closeItemModal, #closeCategoryModal, .cancel-modal-btn {
+                background: #e5e7eb !important;
+                color: #374151 !important;
+                border: none !important;
+                padding: 10px 20px !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+                cursor: pointer !important;
+                transition: background 0.2s !important;
+            }
+            #closeItemModal:hover, #closeCategoryModal:hover, .cancel-modal-btn:hover {
+                background: #d1d5db !important;
+            }
+        `;
+        document.head.appendChild(styleTag);
     }
-    if (closeItemBtn && itemModal) {
-        closeItemBtn.addEventListener('click', () => {
-            itemModal.style.display = 'none';
+
+    // ---------- ITEM MODAL ----------
+    const itemModal = document.getElementById("itemModal");
+    const closeItemModal = document.getElementById("closeItemModal");
+    const itemForm = document.getElementById("addItemForm");
+
+    // Listen to all elements that open the item modal (supports IDs and classes)
+    document.querySelectorAll("#addItemBtn, .addItemBtn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (itemModal) itemModal.style.display = "flex";
+        });
+    });
+
+    if (closeItemModal && itemModal) {
+        closeItemModal.addEventListener("click", () => {
+            itemModal.style.display = "none";
         });
     }
 
     if (itemForm) {
-        itemForm.addEventListener('submit', async (e) => {
+        itemForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            
+
             const newItem = {
-                item_name: document.getElementById('itemName')?.value,
-                category_id: document.getElementById('itemCategory')?.value,
-                description: document.getElementById('itemDescription')?.value,
-                price: document.getElementById('itemPrice')?.value,
-                quantity: document.getElementById('itemQuantity')?.value || 1,
-                location: document.getElementById('itemLocation')?.value,
-                image_path: document.getElementById('itemImage')?.value,
-                owner_name: document.getElementById('ownerName')?.value,
-                owner_phone: document.getElementById('ownerPhone')?.value
+                category_id: document.getElementById("itemCategory").value,
+                item_name: document.getElementById("itemName").value,
+                description: document.getElementById("itemDescription").value,
+                price: document.getElementById("itemPrice").value,
+                quantity: document.getElementById("itemQuantity").value || 1,
+                location: document.getElementById("itemLocation").value,
+                image_path: document.getElementById("itemImage").value,
+                owner_name: document.getElementById("ownerName").value,
+                owner_phone: document.getElementById("ownerPhone").value
             };
 
             try {
+
                 const response = await fetch(`${API_BASE_URL}/items`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
                     body: JSON.stringify(newItem)
                 });
-                if (!response.ok) throw new Error('Failed to create item');
 
-                if (itemModal) itemModal.style.display = 'none';
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Failed to save item");
+                }
+
                 itemForm.reset();
+                itemModal.style.display = "none";
+
                 fetchItems();
+
             } catch (err) {
-                console.error('Error adding new item:', err);
-                alert('Failed to save item. Please check inputs.');
+
+                console.error(err);
+                alert(err.message);
+
             }
         });
     }
 
-    // Category Modal Handling
-    const categoryModal = document.getElementById('categoryModal');
-    const openCategoryBtn = document.getElementById('addCategoryBtn');
-    const closeCategoryBtn = document.getElementById('closeCategoryModal');
-    const categoryForm = document.getElementById('addCategoryForm');
+    // ---------- CATEGORY MODAL ----------
+    const categoryModal = document.getElementById("categoryModal");
+    const closeCategoryModal = document.getElementById("closeCategoryModal");
+    const categoryForm = document.getElementById("addCategoryForm");
 
-    if (openCategoryBtn && categoryModal) {
-        openCategoryBtn.addEventListener('click', () => {
-            categoryModal.style.display = 'flex';
+    // Listen to all elements that open the category modal (supports IDs and classes)
+    document.querySelectorAll("#addCategoryBtn, .addCategoryBtn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (categoryModal) categoryModal.style.display = "flex";
         });
-    }
-    if (closeCategoryBtn && categoryModal) {
-        closeCategoryBtn.addEventListener('click', () => {
-            categoryModal.style.display = 'none';
+    });
+
+    if (closeCategoryModal && categoryModal) {
+        closeCategoryModal.addEventListener("click", () => {
+            categoryModal.style.display = "none";
         });
     }
 
     if (categoryForm) {
-        categoryForm.addEventListener('submit', async (e) => {
+
+        categoryForm.addEventListener("submit", async (e) => {
+
             e.preventDefault();
-            
+
             const newCategory = {
-                category_name: document.getElementById('categoryName')?.value
+                category_name: document.getElementById("categoryName").value
             };
 
             try {
-                const response = await fetch(`${API_URL}/categories`, { // Updated to API_BASE_URL for consistency if needed, or API_URL
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+
+                const response = await fetch(`${API_BASE_URL}/categories`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
                     body: JSON.stringify(newCategory)
                 });
-                if (!response.ok) throw new Error('Failed to create category');
 
-                if (categoryModal) categoryModal.style.display = 'none';
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Failed to save category");
+                }
+
                 categoryForm.reset();
+                categoryModal.style.display = "none";
+
                 fetchCategories();
                 fetchItems();
+
             } catch (err) {
-                console.error('Error adding new category:', err);
+
+                console.error(err);
+                alert(err.message);
+
             }
+
         });
+
     }
+
+    // Close modals when clicking outside the modal content window
+    window.addEventListener("click", (event) => {
+        if (event.target === itemModal) {
+            itemModal.style.display = "none";
+        }
+        if (event.target === categoryModal) {
+            categoryModal.style.display = "none";
+        }
+    });
+
 }

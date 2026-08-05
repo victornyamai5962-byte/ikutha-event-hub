@@ -2,250 +2,528 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ikutha Event Hub - Category Items</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* =====================================================
+           IKUTHA EVENT HUB - FULL STYLES
+        ===================================================== */
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Poppins',sans-serif;background:#f6f8fb;color:#333;line-height:1.7;}
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+        /* FLOATING TOAST NOTIFICATION (Add to cart) */
+        .toast-notification {
+            position: absolute;
+            z-index: 999999;
+            background: #111827;
+            color: #ffffff;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            border-left: 5px solid #10b981;
+            opacity: 0;
+            transform: translateY(10px) scale(0.95);
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
 
-    <title>Category - Ikutha Event Hub</title>
+        /* NEW LARGE BOOKING ERROR BANNER (Above submit button) */
+        .booking-error-banner {
+            background: #f8d7da;
+            color: #842029;
+            border: 2px solid #f5c2c7;
+            padding: 20px 25px; /* Larger padding */
+            border-radius: 14px;
+            margin-bottom: 25px;
+            font-size: 17px; /* Larger, readable text */
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.2);
+            animation: fadeInError 0.4s ease-out;
+            line-height: 1.4;
+        }
+        .booking-error-banner.hidden {
+            display: none;
+        }
+        @keyframes fadeInError {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    <link rel="stylesheet" href="style.css">
+        .back-home-btn{display:inline-flex;align-items:center;gap:8px;background:#0d47a1;color:#ffffff;padding:12px 26px;border-radius:50px;text-decoration:none;font-size:15px;font-weight:600;margin-bottom:30px;box-shadow:0 6px 20px rgba(13,71,161,0.25);transition:all 0.3s ease;}
+        .back-home-btn:hover{background:#08306b;transform:translateY(-3px);color:#ffffff;}
 
+        .hero-header{min-height:auto;background:linear-gradient(rgba(0,0,0,.65),rgba(0,0,0,.65)),url("images/hero.jpg");background-size:cover;background-position:center;padding-bottom:40px;}
+        .navbar{width:100%;max-width:1300px;margin:auto;display:flex;justify-content:space-between;align-items:center;padding:25px 30px;}
+        .logo h2{color:#fff;font-size:32px;font-weight:800;}
+        .logo span{color:#ff9800;}
+        .cart-button{background:#fff;color:#0d47a1;padding:14px 22px;border-radius:50px;cursor:pointer;font-weight:700;box-shadow:0 8px 20px rgba(0,0,0,.25);transition:.3s;}
+
+        main{max-width:1300px;margin:auto;padding:20px 30px 80px;}
+        .section-title{text-align:center;margin-bottom:50px;}
+        .section-title span{color:#ff9800;font-weight:700;text-transform:uppercase;letter-spacing:2px;}
+        .section-title h2{font-size:42px;color:#0d47a1;margin:12px 0;}
+        .section-title p{max-width:700px;margin:auto;color:#666;font-size:17px;}
+
+        .items-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:35px;}
+        .item-card{background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,.08);transition:.35s ease;display:flex;flex-direction:column;position:relative;}
+        .item-card:hover{transform:translateY(-10px);box-shadow:0 20px 50px rgba(0,0,0,.15);}
+        .item-card img{width:100%;height:260px;object-fit:cover;background:#f5f5f5;}
+        .item-details{padding:25px;display:flex;flex-direction:column;flex:1;}
+        .item-details h3{color:#0d47a1;font-size:26px;margin-bottom:10px;font-weight:700;}
+        .item-details p{color:#555;margin-bottom:10px;font-size:15px;}
+        .available{display:inline-block;padding:8px 18px;border-radius:30px;font-size:13px;font-weight:600;background:#d4edda;color:#198754;}
+        .unavailable{display:inline-block;padding:8px 18px;border-radius:30px;font-size:13px;font-weight:600;background:#f8d7da;color:#dc3545;}
+
+        .card-actions{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:20px;}
+        .add-cart-btn,.book-btn{border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;transition:.3s;}
+        .add-cart-btn{background:#eef4ff;color:#0d47a1;}
+        .add-cart-btn:hover{background:#0d6efd;color:#fff;}
+        .book-btn{background:#ff9800;color:#fff;}
+        .book-btn:hover{background:#f57c00;}
+
+        .booking-section{margin:80px 0;background:#ffffff;border-radius:25px;padding:45px;box-shadow:0 15px 40px rgba(0,0,0,.08);}
+        .booking-section.hidden{display:none;}
+        .booking-section h2{text-align:center;color:#0d47a1;font-size:36px;margin-bottom:35px;}
+        .booking-section input{width:100%;padding:16px 18px;margin-bottom:20px;border:2px solid #dbe4f0;border-radius:12px;font-size:16px;outline:none;}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;}
+        .booking-total{margin-top:25px;padding:18px;background:#eef4ff;border-radius:12px;text-align:right;font-size:22px;font-weight:700;color:#0d47a1;margin-bottom: 25px;}
+        
+        .submit-booking-btn{width:100%;border:none;border-radius:14px;background:#198754;color:#fff;padding:20px;font-size:20px;font-weight:700;cursor:pointer;box-shadow: 0 8px 20px rgba(25, 135, 84, 0.3); transition: 0.3s;}
+        .submit-booking-btn:hover{background: #146c43; transform: translateY(-3px);}
+
+        .cart-modal,.success-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;justify-content:center;align-items:center;z-index:9999;padding:20px;}
+        .cart-modal.hidden,.success-modal.hidden{display:none;}
+        .cart-modal-content,.success-modal-content{width:100%;max-width:550px;background:#ffffff;border-radius:22px;padding:35px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+        .close-cart-modal{position:absolute;top:18px;right:22px;font-size:34px;cursor:pointer;color:#666;}
+        .cart-item{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:18px;margin-bottom:15px;background:#f8f9fc;border-radius:14px;border:1px solid #e6edf7;}
+
+        footer{background:#0d47a1;color:#ffffff;margin-top:80px;text-align:center;padding:40px;}
+    </style>
 </head>
 
 <body>
 
-<!-- ===================================
-     HEADER
-=================================== -->
-
-<header>
-
-    <div class="header-content">
-
-        <div id="cart">
-
-            Cart (<span id="cart-count">0</span>)
-
-        </div>
-
-        <h1 id="category-name">
-
-            Loading...
-
-        </h1>
-
-        <div class="search-area">
-
-            <input
-
-                type="text"
-
-                id="search"
-
-                placeholder="Search equipment or services..."
-
-            >
-
-        </div>
-
-    </div>
-
+<header class="hero-header">
+    <nav class="navbar">
+        <div class="logo"><h2>IKUTHA <span>EVENT HUB</span></h2></div>
+        <div id="cart" class="cart-button">🛒 Cart (<span id="cart-count">0</span>)</div>
+    </nav>
 </header>
 
-<!-- ===================================
-     MAIN
-=================================== -->
-
 <main>
+    <a href="index.html" class="back-home-btn">← Go Back Home</a>
 
-    <div class="back-home">
-
-        <a href="index.html">
-
-            ← Back to Categories
-
-        </a>
-
+    <div class="section-title" style="margin-top: 20px;">
+        <span id="category-subtitle">Equipment & Services</span>
+        <h2 id="category-name">Loading Category...</h2>
+        <p>Browse available items in this category and book for your event.</p>
     </div>
 
-    <!-- ===================================
-         CATEGORY ITEMS
-    ==================================== -->
-
-    <section id="selected-category">
-
-        <div id="items-container" class="items-grid">
-
-            <!-- Items loaded by script.js -->
-
-        </div>
-
-    </section>
-
-    <!-- ===================================
-         BOOKING SECTION
-    ==================================== -->
-
-    <section id="booking-section"
-             class="booking-section hidden">
-
-        <h2>Complete Your Booking</h2>
-
-        <form id="booking-form">
-
-            <input
-                type="text"
-                id="customer-name"
-                placeholder="Full Name"
-                required
-            >
-
-            <input
-                type="tel"
-                id="customer-phone"
-                placeholder="Phone Number"
-                required
-            >
-
-            <input
-                type="date"
-                id="event-date"
-                required
-            >
-
-            <input
-                type="text"
-                id="event-location"
-                placeholder="Event Location"
-                required
-            >
-
-            <h3>Selected Items</h3>
-
-            <div id="cart-items">
-
-                <!-- Cart items appear here -->
-
-            </div>
-
-            <div class="booking-total">
-
-                <strong>
-
-                    Total: KSh
-
-                    <span id="total-amount">0</span>
-
-                </strong>
-
-            </div>
-
-            <button
-                type="submit"
-                id="submit-booking-btn"
-                class="submit-booking-btn"
-            >
-
-                Submit Booking
-
-            </button>
-
-        </form>
-
-    </section>
-    <!-- ===================================
-         CART MODAL
-    ==================================== -->
-
-    <div id="cart-modal" class="cart-modal hidden">
-
-        <div class="cart-modal-content">
-
-            <span id="close-cart-modal"
-                  class="close-cart-modal">
-
-                &times;
-
-            </span>
-
-            <h2>Your Cart</h2>
-
-            <div id="modal-cart-items">
-
-                <p>Your cart is empty.</p>
-
-            </div>
-
-            <div class="booking-total">
-
-                <strong>
-
-                    Total: KSh
-                    <span id="modal-total-amount">0</span>
-
-                </strong>
-
-            </div>
-
-            <div class="modal-buttons">
-
-                <button
-                    id="proceed-booking-btn"
-                    class="submit-booking-btn"
-                >
-
-                    Proceed to Booking
-
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
+    <div id="items-container" class="items-grid"></div>
 </main>
 
-<!-- ===================================
-     WHATSAPP
-=================================== -->
+<section id="booking-section" class="booking-section hidden">
+    <div class="section-title">
+        <span>Booking Form</span>
+        <h2>Complete Your Booking</h2>
+    </div>
+    <form id="booking-form">
+        <div class="form-grid">
+            <input type="text" id="customer-name" placeholder="Full Name" required>
+            <input type="tel" id="customer-phone" placeholder="Phone Number" required>
+            <input type="date" id="event-date" required>
+            <input type="text" id="event-location" placeholder="Event Location" required>
+        </div>
+        <h3 style="margin-top:20px;color:#0d47a1;">Selected Items</h3>
+        <div id="cart-items"></div>
+        <div class="booking-total">
+            <strong>Total : KSh <span id="total-amount">0</span></strong>
+        </div>
+        
+        <!-- LARGE, NOTICEABLE ERROR NOTIFICATION RIGHT ABOVE SUBMIT BUTTON -->
+        <!-- This replaces all browser alerts completely -->
+        <div id="booking-error-banner" class="booking-error-banner hidden">
+            <span style="font-size: 26px;">⚠️</span>
+            <span id="booking-error-text"></span>
+        </div>
 
-<a
+        <button type="submit" class="submit-booking-btn">Submit Booking</button>
+    </form>
+</section>
 
-    href="https://wa.me/254742210239"
+<div id="cart-modal" class="cart-modal hidden">
+    <div class="cart-modal-content">
+        <span id="close-cart-modal" class="close-cart-modal">&times;</span>
+        <h2>Your Cart</h2>
+        <div id="modal-cart-items"><p>Your cart is empty.</p></div>
+        <div class="booking-total">
+            <strong>Total: KSh <span id="modal-total-amount">0</span></strong>
+        </div>
+        <button id="proceed-booking-btn" class="submit-booking-btn" style="margin-top:20px; padding: 15px; font-size: 16px;">Proceed to Booking</button>
+    </div>
+</div>
 
-    class="whatsapp-button"
-
-    target="_blank"
-
->
-
-    WhatsApp Us
-
-</a>
-
-<!-- ===================================
-     FOOTER
-=================================== -->
+<div id="success-modal" class="success-modal hidden">
+    <div class="success-modal-content" style="text-align:center;">
+        <div style="font-size:52px;margin-bottom:15px;">✅</div>
+        <h2 style="color:#198754;margin-bottom:10px;">Booking Submitted Successfully!</h2>
+        <p style="color:#666;margin-bottom:25px; font-size: 16px;">Our team will contact you shortly.</p>
+        <button id="close-success-btn" class="submit-booking-btn" style="padding: 15px; font-size: 16px;">Continue Browsing</button>
+    </div>
+</div>
 
 <footer>
-
-    <p>
-
-        © 2026 Ikutha Event Hub. All Rights Reserved.
-
-    </p>
-
+    <p>© 2026 Ikutha Event Hub. All Rights Reserved.</p>
 </footer>
 
-<!-- ===================================
-     JAVASCRIPT
-=================================== -->
+<script>
+    const API_URL = window.location.hostname === "localhost" ? "http://localhost:5000" : "https://ikutha-event-hub.onrender.com";
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
+    let allItems = [];
+    let categories = [];
 
-<script src="script.js"></script>
+    document.addEventListener("DOMContentLoaded", () => {
+        updateCartCount();
+        loadCategoryAndItems();
+        setupUI();
+    });
 
+    async function loadCategoryAndItems() {
+        const itemsContainer = document.getElementById("items-container");
+        const titleEl = document.getElementById("category-name");
+        const urlParams = new URLSearchParams(window.location.search);
+        const categoryName = urlParams.get("category");
+        const searchQuery = urlParams.get("search");
+
+        if (!categoryName && !searchQuery) {
+            if (titleEl) titleEl.textContent = "All Items";
+            return;
+        }
+
+        try {
+            const catRes = await fetch(`${API_URL}/categories`);
+            if (!catRes.ok) throw new Error("Failed to load categories");
+            categories = await catRes.json();
+
+            if (searchQuery) {
+                if (titleEl) titleEl.textContent = `Search Results: "${searchQuery}"`;
+                const searchRes = await fetch(`${API_URL}/items/search?q=${encodeURIComponent(searchQuery)}`);
+                allItems = await searchRes.json();
+                displayItems(allItems);
+                return;
+            }
+
+            if (titleEl) titleEl.textContent = categoryName;
+            const foundCat = categories.find(c => c.category_name.toLowerCase() === categoryName.toLowerCase());
+            
+            if (!foundCat) {
+                itemsContainer.innerHTML = `<h3 style="text-align:center;grid-column:1/-1;">Category not found.</h3>`;
+                return;
+            }
+
+            const itemRes = await fetch(`${API_URL}/items/category/${foundCat.id}`);
+            if (!itemRes.ok) throw new Error("Failed to load items");
+            allItems = await itemRes.json();
+            displayItems(allItems);
+
+        } catch (error) {
+            console.error(error);
+            itemsContainer.innerHTML = `<div style="text-align:center;grid-column:1/-1;color:#dc3545;padding:40px;">Failed to connect to database/backend server. Check if your Render server is online.</div>`;
+        }
+    }
+
+    function displayItems(items) {
+        const container = document.getElementById("items-container");
+        if (!container) return;
+        container.innerHTML = "";
+
+        if (!items || items.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;"><h2>No items available in this category.</h2></div>`;
+            return;
+        }
+
+        items.forEach(item => {
+            const available = item.status === "Available";
+            const image = item.image_path ? `${API_URL}/${item.image_path}` : "images/no-image.jpg";
+
+            const card = document.createElement("div");
+            card.className = "item-card";
+            card.innerHTML = `
+                <img src="${image}" alt="${item.item_name}" onerror="this.src='images/no-image.jpg'">
+                <div class="item-details">
+                    <h3>${item.item_name}</h3>
+                    <p>${item.description || "No description available."}</p>
+                    <p><strong>Price:</strong> KSh ${Number(item.price).toLocaleString()}</p>
+                    <p><strong>Quantity Available:</strong> ${item.quantity || 0}</p>
+                    <p><span class="${available ? "available" : "unavailable"}">${item.status}</span></p>
+                    <div class="card-actions">
+                        <button class="add-cart-btn" ${!available ? "disabled" : ""}>🛒 Add to Cart</button>
+                        <button class="book-btn" ${!available ? "disabled" : ""}>⚡ Book Now</button>
+                    </div>
+                </div>
+            `;
+
+            if (available) {
+                const addBtn = card.querySelector(".add-cart-btn");
+                const bookBtn = card.querySelector(".book-btn");
+
+                addBtn.addEventListener("click", (e) => {
+                    addToCart(item);
+                    showToastNearCard(e.target, `${item.item_name} added to cart!`);
+                });
+
+                bookBtn.addEventListener("click", (e) => {
+                    addToCart(item);
+                    showToastNearCard(e.target, `${item.item_name} added to cart!`);
+                    document.getElementById("cart-modal").classList.add("hidden");
+                    const bookingSec = document.getElementById("booking-section");
+                    bookingSec.classList.remove("hidden");
+                    bookingSec.scrollIntoView({ behavior: "smooth" });
+                });
+            }
+
+            container.appendChild(card);
+        });
+    }
+
+    function addToCart(item) {
+        const existing = cart.find(i => i.id == item.id);
+        if (existing) {
+            existing.quantity = (existing.quantity || 1) + 1;
+        } else {
+            cart.push({
+                id: item.id,
+                item_name: item.item_name,
+                price: Number(item.price),
+                quantity: 1
+            });
+        }
+localStorage.setItem("cart", JSON.stringify(cart));
+        updateCartCount();
+        renderCartContent();
+    }
+
+    function updateCartCount() {
+        const count = cart.reduce((sum, i) => sum + Number(i.quantity || 1), 0);
+        const countEl = document.getElementById("cart-count");
+        if (countEl) countEl.textContent = count;
+    }
+
+    // Toast Notification Function 
+    function showToastNearCard(buttonEl, message) {
+        const rect = buttonEl.getBoundingClientRect();
+        const toast = document.createElement("div");
+        toast.className = "toast-notification";
+        toast.innerHTML = `<span style="font-size:18px;">✅</span> <span>${message}</span>`;
+        document.body.appendChild(toast);
+
+        let leftPos = rect.left + (rect.width / 2) - 150;
+        if (leftPos < 20) leftPos = 20;
+        if (leftPos > window.innerWidth - 320) leftPos = window.innerWidth - 320;
+        
+        let topPos = rect.bottom + window.scrollY + 10;
+
+        toast.style.left = `${leftPos}px`;
+        toast.style.top = `${topPos}px`;
+
+        setTimeout(() => {
+            toast.classList.add("show");
+        }, 10);
+
+        // Extended to 6 seconds so you have more time to read it
+        setTimeout(() => {
+            toast.classList.remove("show");
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 6000); 
+    }
+
+    function renderCartContent() {
+        const containers = [document.getElementById("cart-items"), document.getElementById("modal-cart-items")];
+        let total = 0;
+        let html = "";
+
+        if (cart.length === 0) {
+            html = "<p style='text-align:center;color:#666;'>Your cart is empty.</p>";
+        } else {
+            cart.forEach((item, index) => {
+                const sub = Number(item.price) * Number(item.quantity);
+                total += sub;
+                html += `
+                    <div class="cart-item">
+                        <div><strong>${item.item_name}</strong><br>KSh ${Number(item.price).toLocaleString()} × ${item.quantity}</div>
+                        <div>
+                            <button onclick="changeQty(${index}, -1)" style="padding:6px 12px;cursor:pointer;font-size:16px;">-</button>
+                            <span style="margin:0 12px;font-weight:600;font-size:16px;">${item.quantity}</span>
+                            <button onclick="changeQty(${index}, 1)" style="padding:6px 12px;cursor:pointer;font-size:16px;">+</button>
+                            <button onclick="removeCartItem(${index})" style="margin-left:12px;background:#dc3545;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:600;">Remove</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        containers.forEach(c => { if (c) c.innerHTML = html; });
+        const totEl = document.getElementById("total-amount");
+        const modTotEl = document.getElementById("modal-total-amount");
+        if (totEl) totEl.textContent = total.toLocaleString();
+        if (modTotEl) modTotEl.textContent = total.toLocaleString();
+        updateCartCount();
+    }
+
+    window.changeQty = function(index, change) {
+        cart[index].quantity += change;
+        if (cart[index].quantity <= 0) cart.splice(index, 1);
+localStorage.setItem("cart", JSON.stringify(cart));
+        renderCartContent();
+    };
+
+    window.removeCartItem = function(index) {
+        cart.splice(index, 1);
+        localStorage.setItem("cart", JSON.stringify(cart));
+        renderCartContent();
+    };
+
+    function showBookingError(message) {
+        const banner = document.getElementById("booking-error-banner");
+        const textEl = document.getElementById("booking-error-text");
+        if (banner && textEl) {
+            textEl.textContent = message; // Inserts exactly what the backend said (e.g. out of stock error)
+            banner.classList.remove("hidden");
+            // Scroll to the banner so the user sees it immediately
+            banner.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }
+
+    function hideBookingError() {
+        const banner = document.getElementById("booking-error-banner");
+        if (banner) banner.classList.add("hidden");
+    }
+
+    function setupUI() {
+        const cartBtn = document.getElementById("cart");
+        const modal = document.getElementById("cart-modal");
+        const closeBtn = document.getElementById("close-cart-modal");
+        const proceedBtn = document.getElementById("proceed-booking-btn");
+        const bookingForm = document.getElementById("booking-form");
+
+        if (cartBtn && modal) {
+            cartBtn.addEventListener("click", () => {
+                renderCartContent();
+                modal.classList.remove("hidden");
+            });
+        }
+        if (closeBtn && modal) {
+            closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
+        }
+        if (proceedBtn && modal) {
+            proceedBtn.addEventListener("click", () => {
+                modal.classList.add("hidden");
+                const bSec = document.getElementById("booking-section");
+                bSec.classList.remove("hidden");
+                bSec.scrollIntoView({ behavior: "smooth" });
+                renderCartContent();
+            });
+        }
+        
+        if (bookingForm) {
+            bookingForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                hideBookingError(); // Hide previous errors when they try again
+
+                if (cart.length === 0) {
+                    showBookingError("Your cart is empty. Please add items before submitting.");
+                    return;
+                }
+                
+                // Disable button to prevent double-clicks
+                const submitBtn = bookingForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Processing...";
+
+                const name = document.getElementById("customer-name").value.trim();
+                const phone = document.getElementById("customer-phone").value.trim();
+                const date = document.getElementById("event-date").value;
+                const loc = document.getElementById("event-location").value.trim();
+
+                try {
+                    const custRes = await fetch(`${API_URL}/customers`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ full_name: name, phone_number: phone })
+                    });
+                    
+                    if (!custRes.ok) throw new Error("Failed to register customer profile.");
+                    const custData = await custRes.json();
+
+                    const bookRes = await fetch(`${API_URL}/bookings`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            customer_id: custData.customer_id,
+                            event_date: date,
+                            location: loc,
+                            items: cart.map(i => ({ item_id: i.id, quantity: i.quantity, price: i.price }))
+                        })
+                    });
+
+                    if (!bookRes.ok) {
+                        let backendErrorMessage = "Failed to process booking.";
+                        try {
+                            const bookData = await bookRes.json();
+                            // This dynamically grabs exactly the string you saw in the image from your Python backend
+                            backendErrorMessage = bookData.error || bookData.message || "This item is not available on that date.";
+                        } catch(parseErr) {
+                            backendErrorMessage = "Server returned an unexpected error format.";
+                        }
+                        throw new Error(backendErrorMessage);
+                    }
+
+                    // Success handling
+                    document.getElementById("success-modal").classList.remove("hidden");
+cart = [];
+                    localStorage.removeItem("cart");
+                    updateCartCount();
+                    bookingForm.reset();
+                    document.getElementById("booking-section").classList.add("hidden");
+                    
+                } catch (err) {
+                    // Triggers the big red banner with the exact error message
+                    showBookingError(err.message); 
+                } finally {
+                    // Re-enable button if there was an error
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Submit Booking";
+                }
+            });
+        }
+
+        const closeSucc = document.getElementById("close-success-btn");
+        if (closeSucc) {
+            closeSucc.addEventListener("click", () => {
+                document.getElementById("success-modal").classList.add("hidden");
+            });
+        }
+    }
+</script>
 </body>
-
 </html>

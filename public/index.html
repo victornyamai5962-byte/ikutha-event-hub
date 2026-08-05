@@ -2,226 +2,469 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Ikutha Event Hub</title>
+
     <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 </head>
 
 <body>
 
-<!-- ===================================
-     HEADER
-=================================== -->
-<header>
-    <div class="header-content">
-        <div id="cart">
-            Cart (<span id="cart-count">0</span>)
+<!-- ===========================
+TOAST NOTIFICATION CONTAINER
+=========================== -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ===========================
+HEADER
+=========================== -->
+
+<header class="hero-header">
+
+    <nav class="navbar">
+
+        <div class="logo">
+
+            <h2>IKUTHA <span>EVENT HUB</span></h2>
+
         </div>
 
-        <h1>IKUTHA EVENT HUB</h1>
+        <div id="cart" class="cart-button">
+
+            🛒 Cart (<span id="cart-count">0</span>)
+
+        </div>
+
+    </nav>
+
+    <div class="hero-content">
+
+        <div class="hero-text">
+
+            <span class="welcome-tag">
+                Welcome to Ikutha Event Hub
+            </span>
+
+            <h1>
+
+                Everything You Need For A Perfect Event
+
+            </h1>
+
+            <p>
+
+                Hire quality sound systems, tents, seats, cameras,
+                decorations, lighting, generators, catering services,
+                DJs and much more—all from one trusted platform.
+
+            </p>
+
+            <div class="hero-buttons">
+
+                <a href="#categories" class="primary-btn">
+
+                    Browse Categories
+
+                </a>
+
+                <a href="#contact" class="secondary-btn">
+
+                    Contact Us
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="hero-search">
+
+            <h3>Find Equipment</h3>
+
+            <input
+
+                type="text"
+
+                id="search"
+
+                placeholder="Search equipment or services..."
+
+            >
+
+            <p>
+
+                Search for speakers, tents, cameras,
+                decorations, catering and more.
+
+            </p>
+
+        </div>
+
+    </div>
+
+</header>
+<!-- ===========================
+FEATURES
+=========================== -->
+
+<section class="features-section">
+
+    <div class="feature-card">
+
+        <div class="feature-icon">🚚</div>
+
+        <h3>Fast Delivery</h3>
 
         <p>
-            Deals with; Sound Systems • Seats & Tents • Cameras • Videographers •
-            Lighting • DJ Equipment • Generators • Decorations • Catering
+            We deliver event equipment safely and on time to your location.
         </p>
 
-        <div class="search-area">
-            <input
-                type="text"
-                id="search"
-                placeholder="Search item..."
-            >
-        </div>
     </div>
-</header>
 
-<!-- ===================================
-     MAIN
-=================================== -->
+    <div class="feature-card">
+
+        <div class="feature-icon">📅</div>
+
+        <h3>Easy Booking</h3>
+
+        <p>
+            Book event equipment in just a few minutes from your phone or computer.
+        </p>
+
+    </div>
+
+    <div class="feature-card">
+
+        <div class="feature-icon">🛡️</div>
+
+        <h3>Reliable Service</h3>
+
+        <p>
+            Trusted equipment with professional customer support.
+        </p>
+
+    </div>
+
+    <div class="feature-card">
+
+        <div class="feature-icon">💬</div>
+
+        <h3>Customer Support</h3>
+
+        <p>
+            Our team is always ready to assist with your booking.
+        </p>
+
+    </div>
+
+</section>
+
+<!-- ===========================
+MAIN
+=========================== -->
+
 <main>
 
-    <!-- ===================================
-         ITEMS CONTAINER (REQUIRED FOR SCRIPT.JS)
-    =================================== -->
-    <section class="items-section">
-        <h2 id="category-name"></h2>
-        <div id="items-container" class="items-grid">
-            <!-- Dynamic items or search results appear here -->
-        </div>
-    </section>
+<!-- ===========================
+CATEGORY PAGE VIEW & GO BACK HOME BUTTON
+=========================== -->
+<div id="category-view-header" style="margin-bottom: 30px; display: none;">
+    <a href="index.html" class="back-home-btn">
+        ← Go Back Home
+    </a>
+</div>
 
-    <!-- ===================================
-         CATEGORIES
-    =================================== -->
-    <section class="categories-section">
-        <h2>Categories</h2>
+<!-- ===========================
+CATEGORIES
+=========================== -->
 
-        <div class="categories-grid">
-            <a class="category-card" href="category.html?category=Sound%20Systems">
-                <h3>Sound Systems</h3>
-            </a>
+<section id="categories" class="categories-section">
 
-            <a class="category-card" href="category.html?category=Seats%20%26%20Tents">
-                <h3>Seats &amp; Tents</h3>
-            </a>
+    <div class="section-title">
 
-            <a class="category-card" href="category.html?category=Cameras">
-                <h3>Cameras</h3>
-            </a>
+        <span>Our Services</span>
 
-            <a class="category-card" href="category.html?category=Videographers">
-                <h3>Videographers</h3>
-            </a>
+        <h2 id="category-name">Browse Event Categories</h2>
 
-            <a class="category-card" href="category.html?category=Lighting">
-                <h3>Lighting</h3>
-            </a>
+        <p>
 
-            <a class="category-card" href="category.html?category=DJ%20Equipment">
-                <h3>DJ Equipment</h3>
-            </a>
+            Select a category below to view all available equipment
+            and services.
 
-            <a class="category-card" href="category.html?category=Generators">
-                <h3>Generators</h3>
-            </a>
+        </p>
 
-            <a class="category-card" href="category.html?category=Decorations">
-                <h3>Decorations</h3>
-            </a>
+    </div>
 
-            <a class="category-card" href="category.html?category=Catering">
-                <h3>Catering</h3>
-            </a>
-        </div>
-    </section>
+    <!-- ITEMS CONTAINER (For Category/Search View) -->
+    <div id="items-container" class="items-grid" style="margin-bottom: 50px;">
+        <!-- Items loaded by script.js -->
+    </div>
 
-    <!-- ===================================
-         BOOKING SECTION
-    =================================== -->
-    <section id="booking-section" class="booking-section hidden">
-        <h2>Complete Your Booking</h2>
+    <div id="categories-container" class="categories-grid">
 
-        <form id="booking-form">
-            <input
-                type="text"
-                id="customer-name"
-                placeholder="Full Name"
-                required
-            >
+        <!-- Categories loaded by script.js -->
 
-            <input
-                type="tel"
-                id="customer-phone"
-                placeholder="Phone Number"
-                required
-            >
+    </div>
 
-            <input
-                type="date"
-                id="event-date"
-                required
-            >
+</section>
 
-            <input
-                type="text"
-                id="event-location"
-                placeholder="Event Location"
-                required
-            >
+<!-- ===========================
+CONTACT SECTION
+=========================== -->
 
-            <h3>Selected Items</h3>
+<section id="contact" class="contact-section">
 
-            <div id="cart-items">
-                <!-- Cart items appear here dynamically -->
-            </div>
+    <div class="section-title">
 
-            <div class="booking-total">
-                <strong>
-                    Total: KSh <span id="total-amount">0</span>
-                </strong>
-            </div>
+        <span>Get In Touch</span>
 
-            <button type="submit" id="submit-booking-btn" class="submit-booking-btn">
-                Submit Booking
-            </button>
-        </form>
-    </section>
-
-    <!-- ===================================
-         CONTACT SECTION
-    =================================== -->
-    <section class="contact-section">
         <h2>Need Help?</h2>
-        <p>Contact us directly for bookings and enquiries.</p>
 
-        <div class="contact-buttons">
-            <a href="tel:+254742210239" class="call-button">
-                📞 Call Now
+        <p>
+
+            Contact us today for bookings, quotations and enquiries.
+
+        </p>
+
+    </div>
+
+    <div class="contact-grid">
+
+        <div class="contact-card">
+
+            <div class="contact-icon">
+
+                📞
+
+            </div>
+
+            <h3>Call Us</h3>
+
+            <p>
+
+                Speak directly with our team.
+
+            </p>
+
+            <a href="tel:+254742210239">
+
+                +254 742 210 239
+
             </a>
 
-            <a href="https://wa.me/254742210239" target="_blank" class="whatsapp-button">
-                💬 WhatsApp
-            </a>
         </div>
-    </section>
 
-</main>
+<div class="contact-card whatsapp-card">
 
-<!-- ===================================
-     CART MODAL
-=================================== -->
+            <div class="contact-icon whatsapp-icon">
+
+                💬
+
+            </div>
+
+            <h3>WhatsApp</h3>
+
+            <p>
+
+                Chat with us instantly.
+
+            </p>
+
+            <a href="https://wa.me/254742210239" target="_blank">
+
+                Start Chat
+
+            </a>
+
+        </div>
+
+        <div class="contact-card">
+
+            <div class="contact-icon">
+
+                📍
+
+            </div>
+
+            <h3>Location</h3>
+
+            <p>
+
+                Ikutha, Kitui County, Kenya
+
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+<!-- ===========================
+CART MODAL
+=========================== -->
+
 <div id="cart-modal" class="cart-modal hidden">
+
     <div class="cart-modal-content">
-        <span id="close-cart-modal" class="close-cart-modal">&times;</span>
+
+        <span id="close-cart-modal" class="close-cart-modal">
+
+            &times;
+
+        </span>
 
         <h2>Your Cart</h2>
 
         <div id="modal-cart-items">
+
             <p>Your cart is empty.</p>
+
         </div>
 
         <div class="booking-total">
+
             <strong>
-                Total: KSh <span id="modal-total-amount">0</span>
+
+                Total: KSh
+                <span id="modal-total-amount">0</span>
+
             </strong>
+
         </div>
 
         <div class="modal-buttons">
-            <button id="proceed-booking-btn" class="submit-booking-btn">
+
+            <button
+                id="proceed-booking-btn"
+                class="submit-booking-btn">
+
                 Proceed to Booking
+
             </button>
+
         </div>
+
     </div>
+
 </div>
 
-<!-- ===================================
-     SUCCESS BOOKING MODAL
-=================================== -->
+<!-- ===========================
+SUCCESS MODAL
+=========================== -->
+
 <div id="success-modal" class="success-modal hidden">
+
     <div class="success-modal-content">
-        <div class="success-icon"></div>
-        <h2>Booking Submitted Successfully!</h2>
+
+        <div class="success-icon">
+
+            ✅
+
+        </div>
+
+        <h2>
+
+            Booking Submitted Successfully!
+
+        </h2>
+
         <p>
-            Your request has been received. Please wait as our team processes it and reaches out to you with confirmation.
+
+            Thank you for choosing Ikutha Event Hub.
+
+            Your booking has been received successfully.
+
+            Our team will contact you shortly.
+
         </p>
-        <button id="close-success-btn" class="submit-booking-btn">
-            Got It / Continue Browsing
+
+        <button
+            id="close-success-btn"
+            class="submit-booking-btn">
+
+            Continue Browsing
+
         </button>
+
     </div>
+
 </div>
 
-<!-- ===================================
-     FOOTER
-=================================== -->
+<!-- ===========================
+FOOTER
+=========================== -->
+
 <footer>
-    <p>© 2026 Ikutha Event Hub. All Rights Reserved.</p>
+
+    <div class="footer-container">
+
+        <div class="footer-logo">
+
+            <h2>
+
+                IKUTHA EVENT HUB
+
+            </h2>
+
+            <p>
+
+                Professional Event Equipment & Services
+
+            </p>
+
+        </div>
+
+        <div class="footer-links">
+
+            <a href="#">Home</a>
+
+            <a href="#categories">Categories</a>
+
+            <a href="#contact">Contact</a>
+
+        </div>
+
+        <div class="footer-contact">
+
+            <p>
+
+                📞 +254 742 210 239
+
+            </p>
+
+            <p>
+
+                📍 Ikutha, Kitui County
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <p class="copyright">
+
+        © 2026 Ikutha Event Hub. All Rights Reserved.
+
+    </p>
+
 </footer>
 
-<!-- ===================================
-     JAVASCRIPT LINK
-=================================== -->
 <script src="script.js"></script>
 
 </body>
+
 </html>

@@ -3,198 +3,481 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ikutha Event Hub - Admin</title>
+    <title>Ikutha Event Hub | Admin Dashboard</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css">
+
+    <!-- Admin CSS -->
     <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
-    <!-- Authentication Check Guard -->
+    <!-- Authentication Check -->
     <script>
-        if (localStorage.getItem('isAdminLoggedIn') !== 'true') {
-            window.location.href = 'login.html';
+        if (localStorage.getItem("isAdminLoggedIn") !== "true") {
+            window.location.href = "login.html";
         }
     </script>
 
-    <header>
-        <h1>Ikutha Event Hub - Admin Dashboard</h1>
-    </header>
-
-    <nav>
-        <button id="dashboardBtn">Dashboard</button>
-        <button id="categoriesBtn">Categories</button>
-        <button id="itemsBtn">Items</button>
-        <button id="bookingsBtn">
-            Booking Requests <span id="bookingBadge" class="badge-count" style="display: none;">0</span>
-        </button>
-        <button id="customersBtn">Customers</button>
-        <button id="logoutBtn" onclick="logout()">Logout</button>
-    </nav>
-
-    <main>
-
-        <section id="dashboard">
-            <h2>Welcome, Admin</h2>
-            <p>Manage categories, items, availability, customers and booking requests.</p>
-        </section>
-
-        <section id="bookingRequests" style="display: none;">
-            <h2>Booking Requests</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Customer</th>
-                        <th>Phone</th>
-                        <th>Category</th>
-                        <th>Item</th>
-                        <th>Location</th>
-                        <th>Event Date</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="bookingTableBody">
-                    <!-- Booking requests will be loaded here by admin.js -->
-                </tbody>
-            </table>
-        </section>
-
-        <section id="customers" style="display: none;">
-            <h2>Customers List</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Full Name</th>
-                        <th>Phone Number</th>
-                        <th>Items Ordered</th>
-                        <th>Event Location</th>
-                        <th>Status</th>
-                        <th>Date Created</th>
-                    </tr>
-                </thead>
-                <tbody id="customerTableBody">
-                    <!-- Customers will be loaded here by admin.js -->
-                </tbody>
-            </table>
-        </section>
-
-        <section id="categories" style="display: none;">
-            <div class="section-header">
-                <h2>Categories</h2>
-                <button id="addCategoryBtn">Add Category</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Category Name</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="categoryTableBody"></tbody>
-            </table>
-        </section>
-
-        <section id="items" style="display: none;">
-            <div class="section-header">
-                <h2>Items</h2>
-                <button id="addItemBtn">Add Item</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Image</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                        <th>Qty</th>
-                        <th>Offered By</th>
-                        <th>Owner Phone</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="itemTableBody"></tbody>
-            </table>
-        </section>
-
-    </main>
-
-    <!-- Modal Form for Adding New Items -->
-    <div id="itemModal" class="modal">
-        <div class="modal-content">
-            <h3>Add New Item</h3>
-            <form id="addItemForm">
-                <div class="form-group">
-                    <label for="itemName">Item Name</label>
-                    <input type="text" id="itemName" required>
-                </div>
-                <div class="form-group">
-                    <label for="itemCategory">Category</label>
-                    <select id="itemCategory" required></select>
-                </div>
-                <div class="form-group">
-                    <label for="itemDescription">Description</label>
-                    <textarea id="itemDescription" rows="3" placeholder="Enter item description..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="itemPrice">Price (KES) - Per Day</label>
-                    <input type="number" id="itemPrice" step="0.01" required placeholder="e.g. 1500">
-                </div>
-                <div class="form-group">
-                    <label for="itemQuantity">Quantity</label>
-                    <input type="number" id="itemQuantity" value="1" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label for="itemLocation">Location</label>
-                    <input type="text" id="itemLocation" placeholder="e.g. Ikutha, Kitui">
-                </div>
-                <div class="form-group">
-                    <label for="itemImage">Image URL or Path</label>
-                    <input type="text" id="itemImage" placeholder="e.g. image/speaker.jpg">
-                </div>
-
-                <!-- Third-Party / Vendor Tracking Fields -->
-                <div class="form-group">
-                    <label for="ownerName">Offered By (Owner / Vendor Name)</label>
-                    <input type="text" id="ownerName" placeholder="e.g. John Doe">
-                </div>
-                <div class="form-group">
-                    <label for="ownerPhone">Owner Phone Number</label>
-                    <input type="text" id="ownerPhone" placeholder="e.g. 0712345678">
-                </div>
-
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
-                    <button type="button" id="closeItemModal">Cancel</button>
-                    <button type="submit" id="saveItemBtn">Save Item</button>
-                </div>
-            </form>
+    <!-- ======================================================= -->
+    <!-- SIDEBAR                                                 -->
+    <!-- ======================================================= -->
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>
+                <i class="fa-solid fa-calendar-check"></i>
+                Ikutha Event Hub
+            </h2>
+            <p>Admin Panel</p>
         </div>
+
+        <nav class="sidebar-nav">
+            <button id="dashboardBtn" class="active">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Dashboard</span>
+            </button>
+            <button id="categoriesBtn">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Categories</span>
+            </button>
+            <button id="itemsBtn">
+                <i class="fa-solid fa-box-open"></i>
+                <span>Items & Stock</span>
+            </button>
+            <button id="bookingsBtn">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Bookings</span>
+                <span id="bookingBadge" class="badge-count" style="display:none;">0</span>
+            </button>
+            <button id="customersBtn">
+                <i class="fa-solid fa-users"></i>
+                <span>Customers</span>
+            </button>
+            <button onclick="logout()" id="logoutBtn">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- ======================================================= -->
+    <!-- MAIN CONTENT                                            -->
+    <!-- ======================================================= -->
+    <div class="main-content">
+
+        <!-- Top Header -->
+        <header class="top-header">
+            <div>
+                <h1>Good Morning, Administrator 👋</h1>
+                <p>Manage your event business from one dashboard.</p>
+            </div>
+            <div class="header-right">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search anything...">
+                </div>
+            </div>
+        </header>
+
+        <main>
+
+            <!-- ======================================================= -->
+            <!-- DASHBOARD SECTION                                       -->
+            <!-- ======================================================= -->
+            <section id="dashboard">
+                <h2>Dashboard Overview</h2>
+
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div>
+                            <h3 id="totalCategories">0</h3>
+                            <p>Total Categories</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <div>
+                            <h3 id="totalItems">0</h3>
+                            <p>Total Items</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <h3 id="pendingBookings">0</h3>
+                            <p>Pending Bookings</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div>
+                            <h3 id="totalCustomers">0</h3>
+                            <p>Total Customers</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics & Quick Actions -->
+                <div class="analytics-grid">
+                    <!-- Quick Actions -->
+                    <div class="glass-card">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fa-solid fa-bolt"></i>
+                                Quick Actions
+                            </h2>
+                        </div>
+                        <div class="quick-actions">
+                            <button id="addCategoryBtn" class="action-card addCategoryBtn">
+                                <i class="fa-solid fa-folder-plus"></i>
+                                <span>Add Category</span>
+                            </button>
+                            <button id="addItemBtn" class="action-card addItemBtn">
+                                <i class="fa-solid fa-square-plus"></i>
+                                <span>Add Item</span>
+                            </button>
+                            <button class="action-card">
+                                <i class="fa-solid fa-chart-simple"></i>
+                                <span>View Reports</span>
+                            </button>
+                            <button class="action-card">
+                                <i class="fa-solid fa-gear"></i>
+                                <span>Settings</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="glass-card">
+                        <div class="section-header">
+                            <h2>
+                                <i class="fa-solid fa-bell"></i>
+                                Notifications
+                            </h2>
+                        </div>
+                        <div class="notification-list">
+                            <div class="notification-item">
+                                <div class="notification-icon success">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </div>
+                                <div>
+                                    <h4>System Ready</h4>
+                                    <p>Dashboard loaded successfully.</p>
+                                </div>
+                            </div>
+                            <div class="notification-item">
+                                <div class="notification-icon warning">
+                                    <i class="fa-solid fa-clock"></i>
+                                </div>
+                                <div>
+                                    <h4>Pending Requests</h4>
+                                    <p>Review new booking requests.</p>
+                                </div>
+                            </div>
+                            <div class="notification-item">
+                                <div class="notification-icon primary">
+                                    <i class="fa-solid fa-users"></i>
+                                </div>
+                                <div>
+                                    <h4>Customers</h4>
+                                    <p>Customer records are up to date.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Bookings Table -->
+                <div class="glass-card mt-30">
+                    <div class="section-header">
+                        <h2>
+                            <i class="fa-solid fa-calendar-days"></i>
+                            Recent Booking Requests
+                        </h2>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Customer</th>
+                                    <th>Phone</th>
+                                    <th>Item</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentBookingsTable">
+                                <!-- admin.js can populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ======================================================= -->
+            <!-- CATEGORIES SECTION                                      -->
+            <!-- ======================================================= -->
+            <section id="categories" style="display:none;">
+                <div class="section-header">
+                    <div>
+                        <h2>
+                            <i class="fa-solid fa-layer-group"></i>
+                            Categories
+                        </h2>
+                        <p>Create and manage event categories.</p>
+                    </div>
+                    <button class="addCategoryBtn">
+                        <i class="fa-solid fa-plus"></i>
+                        Add Category
+                    </button>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Category Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoryTableBody">
+                            <!-- Loaded by admin.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ======================================================= -->
+            <!-- ITEMS SECTION (WITH STOCK TRACKING)                     -->
+            <!-- ======================================================= -->
+            <section id="items" style="display:none;">
+                <div class="section-header">
+                    <div>
+                        <h2>
+                            <i class="fa-solid fa-box-open"></i>
+                            Items & Stock Management
+                        </h2>
+                        <p>Manage inventory, track active bookings, and monitor remaining stock levels.</p>
+                    </div>
+                    <button class="addItemBtn">
+                        <i class="fa-solid fa-square-plus"></i>
+                        Add Item
+                    </button>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="itemSearch" placeholder="Search items...">
+                        </div>
+                    </div>
+                    <div class="toolbar-right">
+                        <select class="filter-select">
+                            <option>All Categories</option>
+                        </select>
+                        <select class="filter-select">
+                            <option>All Status</option>
+                            <option>Available</option>
+                            <option>Unavailable</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Original Qty</th>
+                                <th>Booked Qty</th>
+                                <th>Remaining Stock</th>
+                                <th>Owner</th>
+                                <th>Phone</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemTableBody">
+                            <!-- Loaded with stock columns via admin.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ======================================================= -->
+            <!-- CUSTOMERS SECTION                                       -->
+            <!-- ======================================================= -->
+            <section id="customers" style="display:none;">
+                <div class="section-header">
+                    <div>
+                        <h2>
+                            <i class="fa-solid fa-users"></i>
+                            Customers
+                        </h2>
+                        <p>View and manage all customers.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer Name</th>
+                                <th>Phone Number</th>
+                                <th>Items Ordered</th>
+                                <th>Event Location</th>
+                                <th>Status</th>
+                                <th>Date Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTableBody">
+                            <!-- Loaded by admin.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ======================================================= -->
+            <!-- BOOKING REQUESTS SECTION                                -->
+            <!-- ======================================================= -->
+            <section id="bookingRequests" style="display:none;">
+                <div class="section-header">
+                    <div>
+                        <h2>
+                            <i class="fa-solid fa-calendar-days"></i>
+                            Booking Requests
+                        </h2>
+                        <p>Review, approve (deducts stock) or reject/cancel (restores stock) booking requests.</p>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="booking-requests-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Category</th>
+                                <th>Item</th>
+                                <th>Location</th>
+                                <th>Event Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingTableBody">
+                            <!-- Loaded by admin.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ======================================================= -->
+            <!-- ITEM MODAL                                              -->
+            <!-- ======================================================= -->
+            <div id="itemModal" class="modal">
+                <div class="modal-content">
+                    <h3>
+                        <i class="fa-solid fa-box-open"></i>
+                        Add New Item
+                    </h3>
+                    <form id="addItemForm">
+                        <div class="form-group">
+                            <label>Item Name</label>
+                            <input type="text" id="itemName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="itemCategory" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="itemDescription" rows="4"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Price (KES / Day)</label>
+                            <input type="number" id="itemPrice" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" id="itemQuantity" value="1" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="itemLocation" placeholder="e.g. Ikutha, Kitui">
+                        </div>
+                        <div class="form-group">
+                            <label>Image URL / Path</label>
+                            <input type="text" id="itemImage" placeholder="image/speaker.jpg">
+                        </div>
+                        <div class="form-group">
+                            <label>Owner Name</label>
+                            <input type="text" id="ownerName">
+                        </div>
+                        <div class="form-group">
+                            <label>Owner Phone</label>
+                            <input type="text" id="ownerPhone">
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" id="closeItemModal">Cancel</button>
+                            <button type="submit" id="saveItemBtn">Save Item</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ======================================================= -->
+            <!-- CATEGORY MODAL                                          -->
+            <!-- ======================================================= -->
+            <div id="categoryModal" class="modal">
+                <div class="modal-content">
+                    <h3>
+                        <i class="fa-solid fa-folder-plus"></i>
+                        Add New Category
+                    </h3>
+                    <form id="addCategoryForm">
+                        <div class="form-group">
+                            <label>Category Name</label>
+                            <input type="text" id="categoryName" required>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" id="closeCategoryModal">Cancel</button>
+                            <button type="submit" id="saveCategoryBtn">Save Category</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </main>
     </div>
 
-    <!-- Modal Form for Adding New Categories -->
-    <div id="categoryModal" class="modal">
-        <div class="modal-content">
-            <h3>Add New Category</h3>
-            <form id="addCategoryForm">
-                <div class="form-group">
-                    <label for="categoryName">Category Name</label>
-                    <input type="text" id="categoryName" required placeholder="e.g. Sound Systems">
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
-                    <button type="button" id="closeCategoryModal">Cancel</button>
-                    <button type="submit" id="saveCategoryBtn">Save Category</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    <!-- Scripts -->
     <script src="admin.js"></script>
     <script>
         function logout() {
-            localStorage.removeItem('isAdminLoggedIn');
-            window.location.href = 'login.html';
+            localStorage.removeItem("isAdminLoggedIn");
+            window.location.href = "login.html";
         }
     </script>
 </body>
