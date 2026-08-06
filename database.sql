@@ -99,3 +99,4 @@ CREATE TABLE IF NOT EXISTS booking_request_items (
     FOREIGN KEY (booking_request_id) REFERENCES booking_requests(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 );
+ALTER TABLE items ADD COLUMN available TINYINT(1) DEFAULT 1;

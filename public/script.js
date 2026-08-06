@@ -393,7 +393,9 @@ function displayItems(items){
 
     items.forEach(item=>{
 
-        const available = item.status === "Available";
+        // Check availability from admin toggle (defaults to true if undefined)
+        const available = item.available !== undefined ? Boolean(item.available) : true;
+        const statusText = available ? "Available" : "Not Available";
 
         const image = item.image_path
             ? `${API_URL}/${item.image_path}`
@@ -449,7 +451,7 @@ function displayItems(items){
                         : "unavailable"
                     }">
 
-                        ${item.status}
+                        ${statusText}
 
                     </span>
 

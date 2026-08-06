@@ -814,7 +814,7 @@ async function fetchItems() {
         tbody.innerHTML = "";
 
         if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center">No items found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center">No items found.</td></tr>`;
             return;
         }
 
@@ -839,6 +839,9 @@ async function fetchItems() {
             const ownerName = item.owner_name || "In-House";
             const ownerPhone = item.owner_phone || "N/A";
 
+            // Determine availability status (defaulting to true if undefined)
+            const isAvailable = item.available !== undefined ? item.available : true;
+
             tr.innerHTML = `
                 <td>${item.id}</td>
                 <td>${image}</td>
@@ -850,6 +853,15 @@ async function fetchItems() {
                 <td style="color: #0d47a1; font-weight: 700;">${remainingStock}</td>
                 <td>${ownerName}</td>
                 <td>${ownerPhone}</td>
+                <td>
+                    <button
+                        onclick="toggleItemAvailability(${item.id})"
+                        style="background: ${isAvailable ? '#22c55e' : '#ef4444'}; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: filter 0.2s;"
+                        onmouseover="this.style.filter='brightness(1.1)'"
+                        onmouseout="this.style.filter='none'">
+                        ${isAvailable ? 'Available' : 'Not Available'}
+                    </button>
+                </td>
                 <td>
                     <button
                         class="btn btn-danger"
@@ -872,6 +884,37 @@ async function fetchItems() {
 
     }
 
+}
+
+async function toggleItemAvailability(itemId) {
+    try {
+        const item = App.items.find(i => i.id === itemId);
+        if (!item) return;
+
+        const currentStatus = item.available !== undefined ? item.available : true;
+        const newStatus = !currentStatus;
+
+        const response = await fetch(`${API_BASE_URL}/admin/items/${itemId}/availability`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ available: newStatus })
+        });
+
+        if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.message || "Failed to update availability");
+        }
+
+        // Update local state and refresh table
+        item.available = newStatus;
+        fetchItems();
+
+    } catch (err) {
+        console.error("Error updating item availability:", err);
+        alert(err.message);
+    }
 }
 // ======================
 // CATEGORIES MANAGEMENT

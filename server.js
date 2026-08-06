@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
@@ -192,7 +193,11 @@ app.get("/items", (req, res) => {
             console.error(err);
             return res.status(500).json({ message: "Database error" });
         }
-        res.json(results);
+        const mappedResults = results.map(item => ({
+            ...item,
+            available: (item.status || "").toLowerCase() !== "unavailable"
+        }));
+        res.json(mappedResults);
     });
 });
 
@@ -222,7 +227,11 @@ app.get("/admin/items", (req, res) => {
             console.error(err);
             return res.status(500).json({ message: "Database error" });
         }
-        res.json(results);
+        const mappedResults = results.map(item => ({
+            ...item,
+            available: (item.status || "").toLowerCase() !== "unavailable"
+        }));
+        res.json(mappedResults);
     });
 });
 
@@ -241,7 +250,11 @@ app.get("/items/search", (req, res) => {
             console.error(err);
             return res.status(500).json({ message: "Database error" });
         }
-        res.json(results);
+        const mappedResults = results.map(item => ({
+            ...item,
+            available: (item.status || "").toLowerCase() !== "unavailable"
+        }));
+        res.json(mappedResults);
     });
 });
 
@@ -259,7 +272,11 @@ app.get("/items/category/:categoryId", (req, res) => {
             console.error(err);
             return res.status(500).json({ message: "Database error" });
         }
-        res.json(results);
+        const mappedResults = results.map(item => ({
+            ...item,
+            available: (item.status || "").toLowerCase() !== "unavailable"
+        }));
+        res.json(mappedResults);
     });
 });
 
@@ -296,6 +313,24 @@ app.put("/items/:id", (req, res) => {
             return res.status(500).json({ message: "Database error" });
         }
         res.json({ message: "Item status updated successfully" });
+    });
+});
+
+app.put("/admin/items/:id/availability", (req, res) => {
+    const itemId = req.params.id;
+    const { available } = req.body;
+    const newStatus = available ? "Available" : "Unavailable";
+    const sql = "UPDATE items SET status = ? WHERE id = ?";
+    
+    db.query(sql, [newStatus, itemId], (err, result) => {
+        if (err) {
+            console.error("Database error updating availability:", err);
+            return res.status(500).json({ message: "Database error updating availability", error: err.message });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: "Item not found" });
+        }
+        res.json({ message: "Item availability updated successfully" });
     });
 });
 
